@@ -1,0 +1,109 @@
+---
+title: "Where Does The Buck Stop? Economic Conditions & Electoral Volatility"
+author: "Karnav Popat & Shashwat Agarwal"
+date: "21/03/2024"
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: vignette
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(kableExtra)
+library(esaps)
+```
+
+```{r data, include=FALSE}
+general <- read.csv("D:/ashoka/sem6/d3s/TCPD/TCPD_GE_All_States_2023-2-2.csv")
+assembly <- read.csv("D:/ashoka/sem6/d3s/TCPD/All_States_AE.csv")
+```
+
+## Dependent Variable
+
+To measure how voters reward and punish retrospective economic conditions, we use electoral volatility. We can calculate this for each constituency and each election using TCPD's election datasets.
+
+```{r tcpd, include=FALSE}
+kable(head(general), caption="General Elections Dataset")
+kable(head(assembly), caption="Assembly Elections Dataset")
+```
+
+Some of the indicators used in Dash & Ferris are calculated at the constituency level, rather than being specific to candidate or party. These are the voter turnout (which indicates the level of democratic participation) and Effective Number of Parties (ENOP, which indicates the effective degree of choice that the voter has).
+
+```{r vote_stats}
+aggregate_electoral_indicators <- assembly %>%
+  group_by(State_Name, Year, Constituency_Name)%>%
+  summarize(total_votes=sum(Votes), Electors=first(Electors), Turnout_Percentage=first(Turnout_Percentage), ENOP=first(ENOP))
+```
+
+```{r vote_stats table, echo=FALSE}
+kable(head(aggregate_electoral_indicators), caption="Aggregate Electoral Indicators") %>%
+  kable_styling(font_size=12)
+```
+
+More comprehensive measures of voting behaviour are calculated from one election to another. Electoral Volatility is expressed as:
+$$
+\frac{\sum_{p=1}^{n}V_{pt} - V_{p(t-1)}}{2}
+$$
+for each party _p_ between election _t_ and _t-1_. We can calculate this as follows:
+
+``` {r partywise}
+assembly <- assembly[1:5000, ]
+
+partywise_votes <- assembly %>%
+  group_by(State_Name, Constituency_Name, Year, Party)%>%
+  summarize(Votes=sum(Votes), Valid_Votes=sum(Valid_Votes), Electors=first(Electors), Constituency_Type=first(Constituency_Type), Vote_Share_Percentage=sum(Vote_Share_Percentage))%>%
+  ungroup()
+
+party_list <- as.list(unique(partywise_votes$Party))
+```
+
+``` {r partywise_2}
+for (party in party_list) {
+  partywise_votes[[paste0("Party_", party)]] <- ifelse(partywise_votes$Party == party, partywise_votes$Votes, 0)
+}
+
+partywise_votes <- partywise_votes%>%
+  select(-Party, -Votes, -Valid_Votes, -Electors, -Constituency_Type)%>%
+  group_by(State_Name, Constituency_Name, Year)%>%
+  summarise_all(.funs = sum)
+```
+
+```{r partywise_votes table, echo=FALSE}
+kable(partywise_votes, caption="Party-wise Votes in Assembly Elections")%>%
+  kable_styling(font_size=12)
+```
+
+``` {r parties_by_election}
+parties <- assembly %>%
+  group_by(State_Name, Constituency_Name, Year) %>%
+  summarize(Parties=list(unique(Party)))%>%
+  arrange(State_Name, Constituency_Name, Year)%>%
+  mutate(
+    Prev_Parties=ifelse(
+      lag(State_Name) == State_Name & lag(Constituency_Name) == Constituency_Name,
+      lag(Parties),
+      NA
+    )
+  )%>%
+  rowwise()%>%
+  mutate(Continuing_Parties = list(intersect(Prev_Parties, Parties)))
+```
+
+```{r parties_by_election table, echo=FALSE}
+kable(head(parties), caption="Parties contesting each Assembly Election")%>%
+  kable_styling(font_size=12)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
