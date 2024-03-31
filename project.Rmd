@@ -51,29 +51,53 @@ $$
 for each party _p_ between election _t_ and _t-1_. We can calculate this as follows:
 
 ``` {r partywise}
-assembly <- assembly[1:5000, ]
+assembly <- assembly[1:10000, ]
 
+# Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
   group_by(State_Name, Constituency_Name, Year, Party)%>%
   summarize(Votes=sum(Votes), Valid_Votes=sum(Valid_Votes), Electors=first(Electors), Constituency_Type=first(Constituency_Type), Vote_Share_Percentage=sum(Vote_Share_Percentage))%>%
   ungroup()
-
-party_list <- as.list(unique(partywise_votes$Party))
 ```
 
-``` {r partywise_2}
-for (party in party_list) {
-  partywise_votes[[paste0("Party_", party)]] <- ifelse(partywise_votes$Party == party, partywise_votes$Votes, 0)
-}
+``` {r pivot}
+# Extract the list of parties
+party_list <- as.list(unique(partywise_votes$Party))
 
+# Widen the dataframe for each party
+for (party in party_list) {
+  partywise_votes[[paste0("Party_", party)]] <- ifelse(partywise_votes$Party == party, partywise_votes$Vote_Share_Percentage, 0)
+}
 partywise_votes <- partywise_votes%>%
   select(-Party, -Votes, -Valid_Votes, -Electors, -Constituency_Type)%>%
   group_by(State_Name, Constituency_Name, Year)%>%
-  summarise_all(.funs = sum)
+  summarise_all(.funs = function(x) sum(x))
+```
+
+``` {r volatility}
+# Calculate the volatility by summing the deltas for each party
+partywise_deltas <- partywise_votes%>%
+  ungroup()%>%
+  group_by(State_Name, Constituency_Name)%>%
+  mutate_at(vars(starts_with("Party_")), 
+            funs(abs(. - lag(.))))%>%
+  mutate_all(~replace(., is.na(.), 0))%>%
+  mutate_at(vars(matches("^Party")), as.numeric)%>%
+  ungroup()%>%
+  mutate(volatility=rowSums(select(., starts_with("Party_"))))%>%
+  mutate(volatility = volatility/2)
+
+volatility <- partywise_deltas%>%
+  select(State_Name, Constituency_Name, Year, volatility)
 ```
 
 ```{r partywise_votes table, echo=FALSE}
-kable(partywise_votes, caption="Party-wise Votes in Assembly Elections")%>%
+kable(head(partywise_votes, 20), caption="Party-wise Votes in Assembly Elections")%>%
+  kable_styling(font_size=12)
+```
+
+```{r partywise_deltas table, echo=FALSE}
+kable(head(volatility, 20), caption="Party-wise Volatility in Assembly Elections")%>%
   kable_styling(font_size=12)
 ```
 
