@@ -14,13 +14,19 @@ library(tidyverse)
 library(dplyr)
 library(lubridate)
 library(kableExtra)
-library(esaps)
+library(sf)
 ```
 
 ```{r data, include=FALSE}
 general <- read.csv("D:/ashoka/sem6/d3s/TCPD/TCPD_GE_All_States_2023-2-2.csv")
 assembly <- read.csv("D:/ashoka/sem6/d3s/TCPD/All_States_AE.csv")
+
+assembly_shp <- st_read("D:/ashoka/sem6/d3s/shp/assembly_constituencies.shp")
 ```
+
+## Research Question
+
+We know that voters punish incumbents when the economy goes sour. At what level of governance do voters allocate responsibility for economic underperformance? Any voter in India is under atleast three levels of governance: local represenntation, state government, and central government. In the United States, where popular perception of control is focused on the President, voters tend to punish the President's party. Does this hold true for India, where economic initiative is (or was) significantly more decentralized?
 
 ## Dependent Variable
 
@@ -48,14 +54,17 @@ More comprehensive measures of voting behaviour are calculated from one election
 $$
 \frac{\sum_{p=1}^{n}V_{pt} - V_{p(t-1)}}{2}
 $$
-for each party _p_ between election _t_ and _t-1_. We can calculate this as follows:
+for each party _p_ between election _t_ and _t-1_. To calculate this, we first widen the dataset to get each party's voteshare in each election.
 
 ``` {r partywise}
-assembly <- assembly[1:10000, ]
+assembly <- assembly%>%
+  mutate(Year = as.integer(Year))%>%
+  filter(Year >= 2014)
 
 # Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
-  group_by(State_Name, Constituency_Name, Year, Party)%>%
+  filter(last_poll == TRUE)%>%
+  group_by(State_Name, Constituency_Name, Constituency_No, Year, Assembly_No, Party)%>%
   summarize(Votes=sum(Votes), Valid_Votes=sum(Valid_Votes), Electors=first(Electors), Constituency_Type=first(Constituency_Type), Vote_Share_Percentage=sum(Vote_Share_Percentage))%>%
   ungroup()
 ```
@@ -70,35 +79,81 @@ for (party in party_list) {
 }
 partywise_votes <- partywise_votes%>%
   select(-Party, -Votes, -Valid_Votes, -Electors, -Constituency_Type)%>%
-  group_by(State_Name, Constituency_Name, Year)%>%
-  summarise_all(.funs = function(x) sum(x))
+  group_by(State_Name, Constituency_Name, Constituency_No, Assembly_No, Year)%>%
+  summarise_all(.funs = function(x) sum(x))%>%
+  ungroup()
 ```
+
+```{r partywise_votes table, echo=FALSE}
+kable(head(partywise_votes, 10), caption="Party-wise Vote Shares in Assembly Elections")%>%
+  kable_styling(font_size=12)
+```
+
+We can now calculate electoral volatility using the Pedersen formula:
 
 ``` {r volatility}
 # Calculate the volatility by summing the deltas for each party
 partywise_deltas <- partywise_votes%>%
-  ungroup()%>%
-  group_by(State_Name, Constituency_Name)%>%
+  group_by(State_Name, Constituency_Name, Constituency_No)%>%
   mutate_at(vars(starts_with("Party_")), 
             funs(abs(. - lag(.))))%>%
   mutate_all(~replace(., is.na(.), 0))%>%
   mutate_at(vars(matches("^Party")), as.numeric)%>%
   ungroup()%>%
-  mutate(volatility=rowSums(select(., starts_with("Party_"))))%>%
-  mutate(volatility = volatility/2)
+  mutate(volatility=rowSums(select(., starts_with("Party_")))/2)
 
 volatility <- partywise_deltas%>%
-  select(State_Name, Constituency_Name, Year, volatility)
+  filter(volatility != 0)%>%
+  select(State_Name, Constituency_Name, Constituency_No, Year, Assembly_No, volatility)
 ```
 
-```{r partywise_votes table, echo=FALSE}
-kable(head(partywise_votes, 20), caption="Party-wise Votes in Assembly Elections")%>%
+``` {r volatility table, echo=FALSE}
+kable(head(volatility, 10), caption="Volatility in Assembly Elections")%>%
   kable_styling(font_size=12)
 ```
 
-```{r partywise_deltas table, echo=FALSE}
-kable(head(volatility, 20), caption="Party-wise Volatility in Assembly Elections")%>%
-  kable_styling(font_size=12)
+This gives us our dependent variable, electoral volatility, at the district level.
+
+``` {r boxplot_state, echo=FALSE}
+ggplot(volatility, aes(x = factor(State_Name), y = volatility)) +
+  geom_boxplot() +
+  labs(title = "Volatility by State") +
+  xlab("State/UT") +
+  ylab("% Volatiliy") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+``` {r boxplot_year, echo=FALSE}
+ggplot(volatility, aes(x = factor(Year), y = volatility)) +
+  geom_boxplot() +
+  labs(title = "Volatility by Election") +
+  xlab("Year") +
+  ylab("% Volatiliy") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+To test our hypothesis, we'd want to narrow this down by calculating electoral volatility separately for the local incumbent party, the ruling state party, and the ruling central party.
+
+``` {shapefile}
+assembly_shp <- assembly_shp%>%
+  filter(state == "Andhra Pradesh")
+
+volatility <- volatility%>%
+  filter(State_Name == "Andhra_Pradesh")
+
+assembly_shp <- assembly_shp[, c("state", "ac", "ac_name", "geometry")]
+assembly_shp = as.data.frame(sapply(assembly_shp, toupper))
+
+assembly_shp <- inner_join(assembly_shp, volatility, by=c("ac_name" = "Constituency_Name"))
+```
+
+## Independent Variable
+
+To measure natiowide economic conditions over time, we use night-lights data as a proxy. This is a well-established though inherently limited practiced. We can get night-lights data from SHRUG.
+
+```{r shrug, include=FALSE}
+kable(head(general), caption="General Elections Dataset")
+kable(head(assembly), caption="Assembly Elections Dataset")
 ```
 
 ``` {r parties_by_election}
