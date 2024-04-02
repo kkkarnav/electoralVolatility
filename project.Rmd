@@ -15,6 +15,8 @@ library(dplyr)
 library(lubridate)
 library(kableExtra)
 library(sf)
+library(raster)
+library(exactextractr)
 ```
 
 ```{r data, include=FALSE}
@@ -22,6 +24,7 @@ general <- read.csv("D:/ashoka/sem6/d3s/TCPD/TCPD_GE_All_States_2023-2-2.csv")
 assembly <- read.csv("D:/ashoka/sem6/d3s/TCPD/All_States_AE.csv")
 
 assembly_shp <- st_read("D:/ashoka/sem6/d3s/shp/assembly_constituencies.shp")
+subdistricts_shp <- st_read("../shp/subdistrict.shp")
 ```
 
 ## Research Question
@@ -32,7 +35,7 @@ We know that voters punish incumbents when the economy goes sour. At what level 
 
 To measure how voters reward and punish retrospective economic conditions, we use electoral volatility. We can calculate this for each constituency and each election using TCPD's election datasets.
 
-```{r tcpd, include=FALSE}
+<!--```{r tcpd, include=FALSE}
 kable(head(general), caption="General Elections Dataset")
 kable(head(assembly), caption="Assembly Elections Dataset")
 ```
@@ -59,12 +62,12 @@ for each party _p_ between election _t_ and _t-1_. To calculate this, we first w
 ``` {r partywise}
 assembly <- assembly%>%
   mutate(Year = as.integer(Year))%>%
-  filter(Year >= 2014)
+  filter(Year >= 2022)
 
 # Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
   filter(last_poll == TRUE)%>%
-  group_by(State_Name, Constituency_Name, Constituency_No, Year, Assembly_No, Party)%>%
+  group_by(State_Name, Constituency_No, Constituency_Name, Year, Assembly_No, Party)%>%
   summarize(Votes=sum(Votes), Valid_Votes=sum(Valid_Votes), Electors=first(Electors), Constituency_Type=first(Constituency_Type), Vote_Share_Percentage=sum(Vote_Share_Percentage))%>%
   ungroup()
 ```
@@ -78,8 +81,8 @@ for (party in party_list) {
   partywise_votes[[paste0("Party_", party)]] <- ifelse(partywise_votes$Party == party, partywise_votes$Vote_Share_Percentage, 0)
 }
 partywise_votes <- partywise_votes%>%
-  select(-Party, -Votes, -Valid_Votes, -Electors, -Constituency_Type)%>%
-  group_by(State_Name, Constituency_Name, Constituency_No, Assembly_No, Year)%>%
+  dplyr::select(-Party, -Votes, -Valid_Votes, -Electors, -Constituency_Type)%>%
+  group_by(State_Name, Constituency_No, Constituency_Name, Assembly_No, Year)%>%
   summarise_all(.funs = function(x) sum(x))%>%
   ungroup()
 ```
@@ -94,17 +97,17 @@ We can now calculate electoral volatility using the Pedersen formula:
 ``` {r volatility}
 # Calculate the volatility by summing the deltas for each party
 partywise_deltas <- partywise_votes%>%
-  group_by(State_Name, Constituency_Name, Constituency_No)%>%
+  group_by(State_Name, Constituency_No, Constituency_Name)%>%
   mutate_at(vars(starts_with("Party_")), 
             funs(abs(. - lag(.))))%>%
   mutate_all(~replace(., is.na(.), 0))%>%
   mutate_at(vars(matches("^Party")), as.numeric)%>%
   ungroup()%>%
-  mutate(volatility=rowSums(select(., starts_with("Party_")))/2)
+  mutate(volatility=rowSums(dplyr::select(., starts_with("Party_")))/2)
 
 volatility <- partywise_deltas%>%
   filter(volatility != 0)%>%
-  select(State_Name, Constituency_Name, Constituency_No, Year, Assembly_No, volatility)
+  dplyr::select(State_Name, Constituency_No, Constituency_Name, Year, Assembly_No, volatility)
 ```
 
 ``` {r volatility table, echo=FALSE}
@@ -145,15 +148,42 @@ assembly_shp <- assembly_shp[, c("state", "ac", "ac_name", "geometry")]
 assembly_shp = as.data.frame(sapply(assembly_shp, toupper))
 
 assembly_shp <- inner_join(assembly_shp, volatility, by=c("ac_name" = "Constituency_Name"))
-```
+```-->
 
 ## Independent Variable
 
 To measure natiowide economic conditions over time, we use night-lights data as a proxy. This is a well-established though inherently limited practiced. We can get night-lights data from SHRUG.
 
-```{r shrug, include=FALSE}
-kable(head(general), caption="General Elections Dataset")
-kable(head(assembly), caption="Assembly Elections Dataset")
+``` {r testin}
+kable(head(volatility))
+```
+
+``` {r subdist, include=FALSE}
+e <- extent(subdistricts_shp)
+subdistrict <- subdistricts_shp %>%
+  dplyr::select(pc11_sd_id, sd_name)
+```
+
+```{r shrug1}
+for (i in 1992:1994) {
+  rasterfile <- raster(paste0("../shrug/li/Harmonized_DN_NTL_", as.character(i), "_calDMSP.tif"))
+  rasterfile <- crop(rasterfile, e, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_calDMSP.tif"), overwrite=TRUE)
+  subdistrict[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, subdistricts_shp, 'mean', progress=FALSE)
+  kable(head(subdistrict))
+}
+```
+
+``` {r shrug2}
+for (i in 2014:2017) {
+  rasterfile <- raster(paste0("../shrug/li/Harmonized_DN_NTL_", as.character(i), "_simVIIRS.tif"))
+  rasterfile <- crop(rasterfile, e, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_simVIIRS.tif"), overwrite=TRUE)
+  subdistrict[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, subdistricts_shp, 'mean', progress=FALSE)
+}
+```
+
+``` {r extract}
+kable(head(subdistrict, 20))
+paste0("nightlight_", as.character(2015))
 ```
 
 ``` {r parties_by_election}
@@ -177,12 +207,3 @@ kable(head(parties), caption="Parties contesting each Assembly Election")%>%
   kable_styling(font_size=12)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
