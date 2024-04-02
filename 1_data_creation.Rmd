@@ -20,10 +20,10 @@ library(exactextractr)
 ```
 
 ```{r data, include=FALSE}
-general <- read.csv("D:/ashoka/sem6/d3s/TCPD/TCPD_GE_All_States_2023-2-2.csv")
-assembly <- read.csv("D:/ashoka/sem6/d3s/TCPD/All_States_AE.csv")
+general <- read.csv("../TCPD/TCPD_GE_All_States_2023-2-2.csv")
+assembly <- read.csv("../TCPD/All_States_AE.csv")
 
-assembly_shp <- st_read("D:/ashoka/sem6/d3s/shp/assembly_constituencies.shp")
+assembly_shp <- st_read("../shp/india_assemblies.shp")
 subdistricts_shp <- st_read("../shp/subdistrict.shp")
 ```
 
@@ -35,7 +35,7 @@ We know that voters punish incumbents when the economy goes sour. At what level 
 
 To measure how voters reward and punish retrospective economic conditions, we use electoral volatility. We can calculate this for each constituency and each election using TCPD's election datasets.
 
-<!--```{r tcpd, include=FALSE}
+```{r tcpd, include=FALSE}
 kable(head(general), caption="General Elections Dataset")
 kable(head(assembly), caption="Assembly Elections Dataset")
 ```
@@ -48,7 +48,7 @@ aggregate_electoral_indicators <- assembly %>%
   summarize(total_votes=sum(Votes), Electors=first(Electors), Turnout_Percentage=first(Turnout_Percentage), ENOP=first(ENOP))
 ```
 
-```{r vote_stats table, echo=FALSE}
+```{r vote_stats_table, echo=FALSE}
 kable(head(aggregate_electoral_indicators), caption="Aggregate Electoral Indicators") %>%
   kable_styling(font_size=12)
 ```
@@ -60,9 +60,10 @@ $$
 for each party _p_ between election _t_ and _t-1_. To calculate this, we first widen the dataset to get each party's voteshare in each election.
 
 ``` {r partywise}
+
 assembly <- assembly%>%
   mutate(Year = as.integer(Year))%>%
-  filter(Year >= 2022)
+  filter(Year >= 2021)
 
 # Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
@@ -81,15 +82,16 @@ for (party in party_list) {
   partywise_votes[[paste0("Party_", party)]] <- ifelse(partywise_votes$Party == party, partywise_votes$Vote_Share_Percentage, 0)
 }
 partywise_votes <- partywise_votes%>%
-  dplyr::select(-Party, -Votes, -Valid_Votes, -Electors, -Constituency_Type)%>%
-  group_by(State_Name, Constituency_No, Constituency_Name, Assembly_No, Year)%>%
+  dplyr::select(-Party, -Votes, -Valid_Votes)%>%
+  group_by(State_Name, Constituency_No, Constituency_Name, Assembly_No, Year, Electors, Constituency_Type)%>%
   summarise_all(.funs = function(x) sum(x))%>%
   ungroup()
 ```
 
-```{r partywise_votes table, echo=FALSE}
+```{r partywise_votes_table, echo=FALSE}
 kable(head(partywise_votes, 10), caption="Party-wise Vote Shares in Assembly Elections")%>%
   kable_styling(font_size=12)
+write.csv(partywise_votes, "./data/partywise_voteshare_constituency.csv", row.names=FALSE)
 ```
 
 We can now calculate electoral volatility using the Pedersen formula:
@@ -106,13 +108,14 @@ partywise_deltas <- partywise_votes%>%
   mutate(volatility=rowSums(dplyr::select(., starts_with("Party_")))/2)
 
 volatility <- partywise_deltas%>%
-  filter(volatility != 0)%>%
-  dplyr::select(State_Name, Constituency_No, Constituency_Name, Year, Assembly_No, volatility)
+  dplyr::select(State_Name, Constituency_No, Constituency_Name, Year, Assembly_No, volatility)%>%
+  filter(volatility != 0)
 ```
 
-``` {r volatility table, echo=FALSE}
+``` {volatility_table, echo=FALSE}
 kable(head(volatility, 10), caption="Volatility in Assembly Elections")%>%
   kable_styling(font_size=12)
+write.csv(volatility, "./data/volatility_constituency.csv", row.names=FALSE)
 ```
 
 This gives us our dependent variable, electoral volatility, at the district level.
@@ -137,53 +140,35 @@ ggplot(volatility, aes(x = factor(Year), y = volatility)) +
 
 To test our hypothesis, we'd want to narrow this down by calculating electoral volatility separately for the local incumbent party, the ruling state party, and the ruling central party.
 
-``` {shapefile}
-assembly_shp <- assembly_shp%>%
-  filter(state == "Andhra Pradesh")
-
-volatility <- volatility%>%
-  filter(State_Name == "Andhra_Pradesh")
-
-assembly_shp <- assembly_shp[, c("state", "ac", "ac_name", "geometry")]
-assembly_shp = as.data.frame(sapply(assembly_shp, toupper))
-
-assembly_shp <- inner_join(assembly_shp, volatility, by=c("ac_name" = "Constituency_Name"))
-```-->
-
 ## Independent Variable
 
-To measure natiowide economic conditions over time, we use night-lights data as a proxy. This is a well-established though inherently limited practiced. We can get night-lights data from SHRUG.
+To measure nationwide economic conditions over time, we use night-lights data as a proxy. This is a well-established though inherently limited practiced. We can get night-lights data from SHRUG.
 
-``` {r testin}
-kable(head(volatility))
+``` {r shapefile, include=FALSE}
+ext <- extent(assembly_shp)
+assembly_data <- assembly_shp %>%
+  dplyr::select(state, ac_no=ac, ac_name, -geometry)
 ```
 
-``` {r subdist, include=FALSE}
-e <- extent(subdistricts_shp)
-subdistrict <- subdistricts_shp %>%
-  dplyr::select(pc11_sd_id, sd_name)
-```
-
-```{r shrug1}
-for (i in 1992:1994) {
+```{r upto2013}
+for (i in 1992:1993) {
   rasterfile <- raster(paste0("../shrug/li/Harmonized_DN_NTL_", as.character(i), "_calDMSP.tif"))
-  rasterfile <- crop(rasterfile, e, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_calDMSP.tif"), overwrite=TRUE)
-  subdistrict[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, subdistricts_shp, 'mean', progress=FALSE)
-  kable(head(subdistrict))
+  rasterfile <- crop(rasterfile, ext, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_calDMSP.tif"), overwrite=TRUE)
+  assembly_data[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, assembly_shp, 'mean', progress=FALSE)
 }
 ```
 
-``` {r shrug2}
-for (i in 2014:2017) {
+``` {r upto2021}
+for (i in 2014:2015) {
   rasterfile <- raster(paste0("../shrug/li/Harmonized_DN_NTL_", as.character(i), "_simVIIRS.tif"))
-  rasterfile <- crop(rasterfile, e, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_simVIIRS.tif"), overwrite=TRUE)
-  subdistrict[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, subdistricts_shp, 'mean', progress=FALSE)
+  rasterfile <- crop(rasterfile, ext, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_simVIIRS.tif"), overwrite=TRUE)
+  assembly_data[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, assembly_shp, 'mean', progress=FALSE)
 }
 ```
 
-``` {r extract}
-kable(head(subdistrict, 20))
-paste0("nightlight_", as.character(2015))
+``` {r shapefile_table, echo=FALSE}
+kable(head(assembly_data, 10))
+st_write(assembly_data, "./data/nightlights_constituency.shp", delete_dsn = T)
 ```
 
 ``` {r parties_by_election}
@@ -202,7 +187,7 @@ parties <- assembly %>%
   mutate(Continuing_Parties = list(intersect(Prev_Parties, Parties)))
 ```
 
-```{r parties_by_election table, echo=FALSE}
+```{r parties_by_election_table, echo=FALSE}
 kable(head(parties), caption="Parties contesting each Assembly Election")%>%
   kable_styling(font_size=12)
 ```
