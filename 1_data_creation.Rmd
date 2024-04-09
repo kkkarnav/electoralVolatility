@@ -24,6 +24,7 @@ general <- read.csv("../TCPD/TCPD_GE_All_States_2023-2-2.csv")
 assembly <- read.csv("../TCPD/All_States_AE.csv")
 
 assembly_shp <- st_read("../shp/india_assemblies.shp")
+assembly_shp_old <- st_read("../shp/AC_All_Final.shp")
 subdistricts_shp <- st_read("../shp/subdistrict.shp")
 ```
 
@@ -60,11 +61,6 @@ $$
 for each party _p_ between election _t_ and _t-1_. To calculate this, we first widen the dataset to get each party's voteshare in each election.
 
 ``` {r partywise}
-
-assembly <- assembly%>%
-  mutate(Year = as.integer(Year))%>%
-  filter(Year >= 2021)
-
 # Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
   filter(last_poll == TRUE)%>%
@@ -115,6 +111,7 @@ volatility <- partywise_deltas%>%
 ``` {volatility_table, echo=FALSE}
 kable(head(volatility, 10), caption="Volatility in Assembly Elections")%>%
   kable_styling(font_size=12)
+write.csv(partywise_votes, "./data/partywise_deltas_constituency.csv", row.names=FALSE)
 write.csv(volatility, "./data/volatility_constituency.csv", row.names=FALSE)
 ```
 
@@ -146,12 +143,16 @@ To measure nationwide economic conditions over time, we use night-lights data as
 
 ``` {r shapefile, include=FALSE}
 ext <- extent(assembly_shp)
+ext_old <- extent(assembly_shp_old)
+
 assembly_data <- assembly_shp %>%
   dplyr::select(state, ac_no=ac, ac_name, -geometry)
+assembly_data_old <- assembly_shp %>%
+  dplyr::select(state=State, ac_no=AC_NO, ac_name=AC_NAME, -geometry)
 ```
 
 ```{r upto2013}
-for (i in 1992:1993) {
+for (i in 1992:2013) {
   rasterfile <- raster(paste0("../shrug/li/Harmonized_DN_NTL_", as.character(i), "_calDMSP.tif"))
   rasterfile <- crop(rasterfile, ext, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_calDMSP.tif"), overwrite=TRUE)
   assembly_data[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, assembly_shp, 'mean', progress=FALSE)
@@ -159,16 +160,19 @@ for (i in 1992:1993) {
 ```
 
 ``` {r upto2021}
-for (i in 2014:2015) {
+for (i in 2014:2021) {
   rasterfile <- raster(paste0("../shrug/li/Harmonized_DN_NTL_", as.character(i), "_simVIIRS.tif"))
-  rasterfile <- crop(rasterfile, ext, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_simVIIRS.tif"), overwrite=TRUE)
-  assembly_data[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, assembly_shp, 'mean', progress=FALSE)
+  rasterfile <- crop(rasterfile, ext_old, snap="out", filename=paste0("../shrug/li/clipped_", as.character(i), "_simVIIRS.tif"), overwrite=TRUE)
+  assembly_data_old[paste0("nightlight_", as.character(i))] <- exact_extract(rasterfile, assembly_shp_old, 'mean', progress=FALSE)
 }
 ```
 
 ``` {r shapefile_table, echo=FALSE}
 kable(head(assembly_data, 10))
+kable(head(assembly_data_old, 10))
+
 st_write(assembly_data, "./data/nightlights_constituency.shp", delete_dsn = T)
+st_write(assembly_data_old, "./data/nightlights_constituency_old.shp", delete_dsn = T)
 ```
 
 ``` {r parties_by_election}
