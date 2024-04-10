@@ -43,13 +43,13 @@ kable(head(assembly), caption="Assembly Elections Dataset")
 
 Some of the indicators used in Dash & Ferris are calculated at the constituency level, rather than being specific to candidate or party. These are the voter turnout (which indicates the level of democratic participation) and Effective Number of Parties (ENOP, which indicates the effective degree of choice that the voter has).
 
-```{r vote_stats}
+```{vote_stats}
 aggregate_electoral_indicators <- assembly %>%
   group_by(State_Name, Year, Constituency_Name)%>%
   summarize(total_votes=sum(Votes), Electors=first(Electors), Turnout_Percentage=first(Turnout_Percentage), ENOP=first(ENOP))
 ```
 
-```{r vote_stats_table, echo=FALSE}
+```{vote_stats_table, echo=FALSE}
 kable(head(aggregate_electoral_indicators), caption="Aggregate Electoral Indicators") %>%
   kable_styling(font_size=12)
 ```
@@ -60,7 +60,7 @@ $$
 $$
 for each party _p_ between election _t_ and _t-1_. To calculate this, we first widen the dataset to get each party's voteshare in each election.
 
-``` {r partywise}
+``` {partywise}
 # Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
   filter(last_poll == TRUE)%>%
@@ -69,7 +69,7 @@ partywise_votes <- assembly %>%
   ungroup()
 ```
 
-``` {r pivot}
+``` {pivot}
 # Extract the list of parties
 party_list <- as.list(unique(partywise_votes$Party))
 
@@ -84,7 +84,7 @@ partywise_votes <- partywise_votes%>%
   ungroup()
 ```
 
-```{r partywise_votes_table, echo=FALSE}
+```{partywise_votes_table, echo=FALSE}
 kable(head(partywise_votes, 10), caption="Party-wise Vote Shares in Assembly Elections")%>%
   kable_styling(font_size=12)
 write.csv(partywise_votes, "./data/partywise_voteshare_constituency.csv", row.names=FALSE)

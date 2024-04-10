@@ -36,35 +36,66 @@ for (i in 2015:2019) {
   year <- paste0("ng_", i)
   nightlights[paste0("ngdelta_", i)] <- (nightlights[[year]] - nightlights[[prev_year]]) / nightlights[[prev_year]] * 100
 }
-nightlights <- nightlights%>%
-  select(-starts_with("ng_"))%>%
-  pivot_longer(cols = starts_with("ngdelta_"),
-                    names_to='year',
-                    values_to='nightlights_delta')%>%
-mutate(across('year', str_replace, 'ngdelta_', ' '))
 ```
 
 ``` {r means}
 nightlights <- nightlights%>%
-  mutate(across('state', str_replace, ' ', '_'))%>%
+  mutate(state = toupper(state))%>%
+  mutate(state = gsub(" ", "_", state))%>%
   mutate(ac_name = toupper(ac_name))%>%
+  mutate(state = gsub("TELANGANA", "ANDHRA_PRADESH", state))%>%
+  mutate(state = gsub("ODISHA", "ORISSA", state))%>%
   mutate(year = as.numeric(year))%>%
-  filter(state == "West_Bengal")
+  mutate(state = toupper(state))
+
 volatility <- volatility%>%
-  mutate(Constituency_No = as.numeric(Constituency_No))%>%
-  mutate(Assembly_No = as.numeric(Assembly_No))%>%
+  filter(Year > 2015)%>%
+  mutate(State_Name = toupper(State_Name))%>%
+  mutate(State_Name = gsub(" ", "_", State_Name))%>%
+  mutate(Constituency_Name = toupper(Constituency_Name))%>%
+  mutate(State_Name = gsub("TELANGANA", "ANDHRA_PRADESH", State_Name))%>%
+  mutate(State_Name = gsub("ODISHA", "ORISSA", State_Name))%>%
   mutate(Year = as.numeric(Year))%>%
-  filter(State_Name == "West_Bengal")
+  mutate(State_Name = toupper(State_Name))%>%
+  mutate(Constituency_No = as.numeric(Constituency_No))%>%
+  mutate(Assembly_No = as.numeric(Assembly_No))
 
 kable(head(nightlights))
 kable(head(volatility))
 ```
 
-``` {r joining}
-final <- inner_join(nightlights, volatility, 
-           by = c("state" = "State_Name", "ac_no" = "Constituency_No", "year" = "Year"))
-kable(head(final, 50))
+``` {r prematching}
+sf_use_s2(FALSE)
+vol_constituencies <- volatility%>%
+  distinct(State_Name, Constituency_Name, Constituency_No, .keep_all = TRUE)
+ng_constituencies <- nightlights%>%
+  distinct(state, ac_name, ac_no, ngdelta_2015, .keep_all = TRUE)
 
+fuzzy <- read.csv("./data/fuzzy_matches2.csv")
+fuzzy <- fuzzy%>%
+  mutate(ac_name = toupper(ac_name))%>%
+  mutate(state = toupper(str_replace_all(state, " ", "_")))%>%
+  arrange(matched_score)
+```
+
+``` {r merging}
+final <- left_join(nightlights, fuzzy, 
+           by = c("ac_name" = "ac_name", "state" = "state"))
+final <- final%>%
+  select(-X, -matched_score, -year)
+final <- inner_join(nightlights, volatility,
+                    by=c("ac_name" = "Constituency_Name", "state" = "State_Name", "ac_no" = "Constituency_No"))
+
+kable(head(final))
+kable(nrow(final))
+```
+
+``` {r write}
+final <- final%>%
+  mutate(volatility = as.numeric(volatility))%>%
+  mutate(ngdelta_2019 = as.numeric(ngdelta_2019))%>%
+  distinct(state, ac_no, ac_name, geometry, volatility, ngdelta_2019)
+st_write(final, "./data/final.shp", delete_dsn = T)
 ```
 
 ## Including Plots

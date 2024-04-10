@@ -389,114 +389,214 @@ for (i in 2015:2019) {
   prev_year &lt;- paste0(&quot;ng_&quot;, i - 1)
   year &lt;- paste0(&quot;ng_&quot;, i)
   nightlights[paste0(&quot;ngdelta_&quot;, i)] &lt;- (nightlights[[year]] - nightlights[[prev_year]]) / nightlights[[prev_year]] * 100
-}
-nightlights &lt;- nightlights%&gt;%
-  select(-starts_with(&quot;ng_&quot;))%&gt;%
-  pivot_longer(cols = starts_with(&quot;ngdelta_&quot;),
-                    names_to=&#39;year&#39;,
-                    values_to=&#39;nightlights_delta&#39;)%&gt;%
-mutate(across(&#39;year&#39;, str_replace, &#39;ngdelta_&#39;, &#39; &#39;))</code></pre>
-<pre><code>## Warning: There was 1 warning in `stopifnot()`.
-## ℹ In argument: `across(&quot;year&quot;, str_replace, &quot;ngdelta_&quot;, &quot; &quot;)`.
-## Caused by warning:
-## ! The `...` argument of `across()` is deprecated as of dplyr 1.1.0.
-## Supply arguments directly to `.fns` through an anonymous function instead.
-## 
-##   # Previously
-##   across(a:b, mean, na.rm = TRUE)
-## 
-##   # Now
-##   across(a:b, \(x) mean(x, na.rm = TRUE))</code></pre>
+}</code></pre>
 <pre class="r"><code>nightlights &lt;- nightlights%&gt;%
-  mutate(across(&#39;state&#39;, str_replace, &#39; &#39;, &#39;_&#39;))%&gt;%
+  mutate(state = toupper(state))%&gt;%
+  mutate(state = gsub(&quot; &quot;, &quot;_&quot;, state))%&gt;%
   mutate(ac_name = toupper(ac_name))%&gt;%
+  mutate(state = gsub(&quot;TELANGANA&quot;, &quot;ANDHRA_PRADESH&quot;, state))%&gt;%
+  mutate(state = gsub(&quot;ODISHA&quot;, &quot;ORISSA&quot;, state))%&gt;%
   mutate(year = as.numeric(year))%&gt;%
-  filter(state == &quot;West_Bengal&quot;)
-volatility &lt;- volatility%&gt;%
-  mutate(Constituency_No = as.numeric(Constituency_No))%&gt;%
-  mutate(Assembly_No = as.numeric(Assembly_No))%&gt;%
+  mutate(state = toupper(state))</code></pre>
+<pre><code>## Warning: There was 1 warning in `stopifnot()`.
+## ℹ In argument: `year = as.numeric(year)`.
+## Caused by warning:
+## ! NAs introduced by coercion</code></pre>
+<pre class="r"><code>volatility &lt;- volatility%&gt;%
+  filter(Year &gt; 2015)%&gt;%
+  mutate(State_Name = toupper(State_Name))%&gt;%
+  mutate(State_Name = gsub(&quot; &quot;, &quot;_&quot;, State_Name))%&gt;%
+  mutate(Constituency_Name = toupper(Constituency_Name))%&gt;%
+  mutate(State_Name = gsub(&quot;TELANGANA&quot;, &quot;ANDHRA_PRADESH&quot;, State_Name))%&gt;%
+  mutate(State_Name = gsub(&quot;ODISHA&quot;, &quot;ORISSA&quot;, State_Name))%&gt;%
   mutate(Year = as.numeric(Year))%&gt;%
-  filter(State_Name == &quot;West_Bengal&quot;)
+  mutate(State_Name = toupper(State_Name))%&gt;%
+  mutate(Constituency_No = as.numeric(Constituency_No))%&gt;%
+  mutate(Assembly_No = as.numeric(Assembly_No))
 
 kable(head(nightlights))</code></pre>
 <table>
 <colgroup>
-<col width="14%" />
-<col width="7%" />
-<col width="12%" />
-<col width="37%" />
 <col width="6%" />
-<col width="21%" />
+<col width="2%" />
+<col width="5%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="13%" />
+<col width="5%" />
+<col width="5%" />
+<col width="5%" />
+<col width="5%" />
+<col width="5%" />
+<col width="5%" />
+<col width="2%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">state</th>
 <th align="right">ac_no</th>
 <th align="left">ac_name</th>
+<th align="right">ng_1992</th>
+<th align="right">ng_1993</th>
+<th align="right">ng_2014</th>
+<th align="right">ng_2015</th>
+<th align="right">ng_2016</th>
+<th align="right">ng_2017</th>
+<th align="right">ng_2018</th>
+<th align="right">ng_2019</th>
 <th align="left">geometry</th>
+<th align="right">ngdelta_1993</th>
+<th align="right">ngdelta_2015</th>
+<th align="right">ngdelta_2016</th>
+<th align="right">ngdelta_2017</th>
+<th align="right">ngdelta_2018</th>
+<th align="right">ngdelta_2019</th>
 <th align="right">year</th>
-<th align="right">nightlights_delta</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">West_Bengal</td>
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="left">MULTIPOLYGON (((89.04236 26…</td>
-<td align="right">1993</td>
-<td align="right">-6.229319</td>
+<td align="left">SIRPUR</td>
+<td align="right">0.4110492</td>
+<td align="right">0.5352790</td>
+<td align="right">6.520885</td>
+<td align="right">6.861316</td>
+<td align="right">5.723174</td>
+<td align="right">7.150575</td>
+<td align="right">7.184897</td>
+<td align="right">7.465248</td>
+<td align="left">MULTIPOLYGON (((79.55699 19…</td>
+<td align="right">30.22261</td>
+<td align="right">5.220622</td>
+<td align="right">-16.587811</td>
+<td align="right">24.94073</td>
+<td align="right">0.4799930</td>
+<td align="right">3.9019442</td>
+<td align="right">NA</td>
 </tr>
 <tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="left">MULTIPOLYGON (((89.04236 26…</td>
-<td align="right">2015</td>
-<td align="right">10.170874</td>
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">2</td>
+<td align="left">CHENNUR</td>
+<td align="right">1.8471193</td>
+<td align="right">2.2658546</td>
+<td align="right">8.210689</td>
+<td align="right">8.772991</td>
+<td align="right">8.072450</td>
+<td align="right">9.727179</td>
+<td align="right">10.589094</td>
+<td align="right">10.717432</td>
+<td align="left">MULTIPOLYGON (((79.90563 19…</td>
+<td align="right">22.66964</td>
+<td align="right">6.848422</td>
+<td align="right">-7.985207</td>
+<td align="right">20.49847</td>
+<td align="right">8.8609002</td>
+<td align="right">1.2119815</td>
+<td align="right">NA</td>
 </tr>
 <tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="left">MULTIPOLYGON (((89.04236 26…</td>
-<td align="right">2016</td>
-<td align="right">-14.759406</td>
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">3</td>
+<td align="left">BELLAMPALLI</td>
+<td align="right">1.7101592</td>
+<td align="right">2.2283971</td>
+<td align="right">7.134856</td>
+<td align="right">7.384798</td>
+<td align="right">6.633897</td>
+<td align="right">7.965139</td>
+<td align="right">8.191889</td>
+<td align="right">8.861242</td>
+<td align="left">MULTIPOLYGON (((79.908 19.1…</td>
+<td align="right">30.30349</td>
+<td align="right">3.503109</td>
+<td align="right">-10.168202</td>
+<td align="right">20.06728</td>
+<td align="right">2.8467728</td>
+<td align="right">8.1709298</td>
+<td align="right">NA</td>
 </tr>
 <tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="left">MULTIPOLYGON (((89.04236 26…</td>
-<td align="right">2017</td>
-<td align="right">17.187510</td>
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">4</td>
+<td align="left">MANCHERIAL</td>
+<td align="right">5.5511055</td>
+<td align="right">6.3680191</td>
+<td align="right">11.161736</td>
+<td align="right">11.697873</td>
+<td align="right">11.288451</td>
+<td align="right">12.719646</td>
+<td align="right">13.757302</td>
+<td align="right">14.964783</td>
+<td align="left">MULTIPOLYGON (((79.10574 19…</td>
+<td align="right">14.71623</td>
+<td align="right">4.803344</td>
+<td align="right">-3.499969</td>
+<td align="right">12.67839</td>
+<td align="right">8.1579065</td>
+<td align="right">8.7770146</td>
+<td align="right">NA</td>
 </tr>
 <tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="left">MULTIPOLYGON (((89.04236 26…</td>
-<td align="right">2018</td>
-<td align="right">2.405704</td>
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">5</td>
+<td align="left">ASIFABAD</td>
+<td align="right">0.4894921</td>
+<td align="right">0.5649003</td>
+<td align="right">6.489279</td>
+<td align="right">6.791655</td>
+<td align="right">6.141421</td>
+<td align="right">7.483316</td>
+<td align="right">7.489865</td>
+<td align="right">7.549194</td>
+<td align="left">MULTIPOLYGON (((78.73274 19…</td>
+<td align="right">15.40540</td>
+<td align="right">4.659613</td>
+<td align="right">-9.574004</td>
+<td align="right">21.84991</td>
+<td align="right">0.0875067</td>
+<td align="right">0.7921242</td>
+<td align="right">NA</td>
 </tr>
 <tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="left">MULTIPOLYGON (((89.04236 26…</td>
-<td align="right">2019</td>
-<td align="right">14.742048</td>
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">6</td>
+<td align="left">KHANAPUR</td>
+<td align="right">1.3173398</td>
+<td align="right">2.2638988</td>
+<td align="right">6.806900</td>
+<td align="right">7.355008</td>
+<td align="right">6.694963</td>
+<td align="right">7.929931</td>
+<td align="right">7.965712</td>
+<td align="right">8.267973</td>
+<td align="left">MULTIPOLYGON (((78.59774 19…</td>
+<td align="right">71.85383</td>
+<td align="right">8.052243</td>
+<td align="right">-8.974091</td>
+<td align="right">18.44622</td>
+<td align="right">0.4512194</td>
+<td align="right">3.7945242</td>
+<td align="right">NA</td>
 </tr>
 </tbody>
 </table>
 <pre class="r"><code>kable(head(volatility))</code></pre>
 <table>
 <colgroup>
-<col width="16%" />
-<col width="21%" />
-<col width="24%" />
+<col width="19%" />
+<col width="20%" />
+<col width="23%" />
 <col width="6%" />
-<col width="16%" />
+<col width="15%" />
 <col width="14%" />
 </colgroup>
 <thead>
@@ -511,636 +611,313 @@ kable(head(nightlights))</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">West_Bengal</td>
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="right">1969</td>
+<td align="left">ICHCHAPURAM</td>
+<td align="right">2019</td>
+<td align="right">15</td>
+<td align="left">13.24</td>
+</tr>
+<tr class="even">
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">2</td>
+<td align="left">PALASA</td>
+<td align="right">2019</td>
+<td align="right">15</td>
+<td align="left">19.47</td>
+</tr>
+<tr class="odd">
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">3</td>
+<td align="left">TEKKALI</td>
+<td align="right">2019</td>
+<td align="right">15</td>
+<td align="left">4.025</td>
+</tr>
+<tr class="even">
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">4</td>
+<td align="left">PATHAPATNAM</td>
+<td align="right">2019</td>
+<td align="right">15</td>
+<td align="left">8.84</td>
+</tr>
+<tr class="odd">
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">5</td>
-<td align="left">13.47</td>
+<td align="left">SRIKAKULAM</td>
+<td align="right">2019</td>
+<td align="right">15</td>
+<td align="left">14.505</td>
 </tr>
 <tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="right">1971</td>
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">6</td>
-<td align="left">20.815</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="right">1972</td>
-<td align="right">7</td>
-<td align="left">22.425</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="right">1977</td>
-<td align="right">8</td>
-<td align="left">30.92</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="right">1982</td>
-<td align="right">9</td>
-<td align="left">47.68</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="right">1987</td>
-<td align="right">10</td>
-<td align="left">43.52</td>
+<td align="left">AMADALAVALASA</td>
+<td align="right">2019</td>
+<td align="right">15</td>
+<td align="left">11.49</td>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>final &lt;- inner_join(nightlights, volatility, 
-           by = c(&quot;state&quot; = &quot;State_Name&quot;, &quot;ac_no&quot; = &quot;Constituency_No&quot;, &quot;year&quot; = &quot;Year&quot;))
-kable(head(final, 50))</code></pre>
+<pre class="r"><code>sf_use_s2(FALSE)</code></pre>
+<pre><code>## Spherical geometry (s2) switched off</code></pre>
+<pre class="r"><code>vol_constituencies &lt;- volatility%&gt;%
+  distinct(State_Name, Constituency_Name, Constituency_No, .keep_all = TRUE)
+ng_constituencies &lt;- nightlights%&gt;%
+  distinct(state, ac_name, ac_no, ngdelta_2015, .keep_all = TRUE)
+
+fuzzy &lt;- read.csv(&quot;./data/fuzzy_matches2.csv&quot;)
+fuzzy &lt;- fuzzy%&gt;%
+  mutate(ac_name = toupper(ac_name))%&gt;%
+  mutate(state = toupper(str_replace_all(state, &quot; &quot;, &quot;_&quot;)))%&gt;%
+  arrange(matched_score)</code></pre>
+<pre class="r"><code>final &lt;- left_join(nightlights, fuzzy, 
+           by = c(&quot;ac_name&quot; = &quot;ac_name&quot;, &quot;state&quot; = &quot;state&quot;))</code></pre>
+<pre><code>## Warning in sf_column %in% names(g): Detected an unexpected many-to-many relationship between `x` and `y`.
+## ℹ Row 154 of `x` matches multiple rows in `y`.
+## ℹ Row 410 of `y` matches multiple rows in `x`.
+## ℹ If a many-to-many relationship is expected, set `relationship =
+##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
+<pre class="r"><code>final &lt;- final%&gt;%
+  select(-X, -matched_score, -year)
+final &lt;- inner_join(nightlights, volatility,
+                    by=c(&quot;ac_name&quot; = &quot;Constituency_Name&quot;, &quot;state&quot; = &quot;State_Name&quot;))</code></pre>
+<pre><code>## Warning in sf_column %in% names(g): Detected an unexpected many-to-many relationship between `x` and `y`.
+## ℹ Row 164 of `x` matches multiple rows in `y`.
+## ℹ Row 41 of `y` matches multiple rows in `x`.
+## ℹ If a many-to-many relationship is expected, set `relationship =
+##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
+<pre class="r"><code>kable(head(final))</code></pre>
 <table style="width:100%;">
 <colgroup>
-<col width="8%" />
+<col width="5%" />
+<col width="2%" />
 <col width="4%" />
-<col width="14%" />
-<col width="22%" />
 <col width="3%" />
-<col width="13%" />
-<col width="14%" />
-<col width="8%" />
-<col width="8%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="4%" />
+<col width="1%" />
+<col width="5%" />
+<col width="1%" />
+<col width="4%" />
+<col width="4%" />
+<col width="11%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">state</th>
 <th align="right">ac_no</th>
 <th align="left">ac_name</th>
-<th align="left">geometry</th>
+<th align="right">ng_1992</th>
+<th align="right">ng_1993</th>
+<th align="right">ng_2014</th>
+<th align="right">ng_2015</th>
+<th align="right">ng_2016</th>
+<th align="right">ng_2017</th>
+<th align="right">ng_2018</th>
+<th align="right">ng_2019</th>
+<th align="right">ngdelta_1993</th>
+<th align="right">ngdelta_2015</th>
+<th align="right">ngdelta_2016</th>
+<th align="right">ngdelta_2017</th>
+<th align="right">ngdelta_2018</th>
+<th align="right">ngdelta_2019</th>
 <th align="right">year</th>
-<th align="right">nightlights_delta</th>
-<th align="left">Constituency_Name</th>
+<th align="right">Constituency_No</th>
+<th align="right">Year</th>
 <th align="right">Assembly_No</th>
 <th align="left">volatility</th>
+<th align="left">geometry</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">West_Bengal</td>
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">1</td>
-<td align="left">MEKLIGANJ</td>
-<td align="left">MULTIPOLYGON (((89.04236 26…</td>
-<td align="right">2016</td>
-<td align="right">-14.7594062</td>
-<td align="left">MEKLIGANJ</td>
-<td align="right">16</td>
-<td align="left">54.5</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
+<td align="left">SIRPUR</td>
+<td align="right">0.4110492</td>
+<td align="right">0.5352790</td>
+<td align="right">6.520885</td>
+<td align="right">6.861316</td>
+<td align="right">5.723174</td>
+<td align="right">7.150575</td>
+<td align="right">7.184897</td>
+<td align="right">7.465248</td>
+<td align="right">30.22261</td>
+<td align="right">5.220622</td>
+<td align="right">-16.587811</td>
+<td align="right">24.94073</td>
+<td align="right">0.4799930</td>
+<td align="right">3.9019442</td>
+<td align="right">NA</td>
+<td align="right">1</td>
+<td align="right">2018</td>
 <td align="right">2</td>
-<td align="left">MATHABHANGA</td>
-<td align="left">MULTIPOLYGON (((89.06786 26…</td>
-<td align="right">2016</td>
-<td align="right">-7.2058017</td>
-<td align="left">MATHABHANGA</td>
-<td align="right">16</td>
-<td align="left">13.425</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">3</td>
-<td align="left">COOCH BEHAR UTTAR</td>
-<td align="left">MULTIPOLYGON (((89.30586 26…</td>
-<td align="right">2016</td>
-<td align="right">-5.2748555</td>
-<td align="left">COOCH BEHAR UTTAR</td>
-<td align="right">16</td>
-<td align="left">9.33</td>
+<td align="left">47.9</td>
+<td align="left">MULTIPOLYGON (((79.55699 19…</td>
 </tr>
 <tr class="even">
-<td align="left">West_Bengal</td>
+<td align="left">ANDHRA_PRADESH</td>
+<td align="right">2</td>
+<td align="left">CHENNUR</td>
+<td align="right">1.8471193</td>
+<td align="right">2.2658546</td>
+<td align="right">8.210689</td>
+<td align="right">8.772991</td>
+<td align="right">8.072450</td>
+<td align="right">9.727179</td>
+<td align="right">10.589094</td>
+<td align="right">10.717432</td>
+<td align="right">22.66964</td>
+<td align="right">6.848422</td>
+<td align="right">-7.985207</td>
+<td align="right">20.49847</td>
+<td align="right">8.8609002</td>
+<td align="right">1.2119815</td>
+<td align="right">NA</td>
+<td align="right">2</td>
+<td align="right">2018</td>
+<td align="right">2</td>
+<td align="left">12.72</td>
+<td align="left">MULTIPOLYGON (((79.90563 19…</td>
+</tr>
+<tr class="odd">
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">4</td>
-<td align="left">COOCH BEHAR DAKSHIN</td>
-<td align="left">MULTIPOLYGON (((89.35011 26…</td>
-<td align="right">2016</td>
-<td align="right">-9.3360780</td>
-<td align="left">COOCH BEHAR DAKSHIN</td>
-<td align="right">16</td>
-<td align="left">14.555</td>
+<td align="left">MANCHERIAL</td>
+<td align="right">5.5511055</td>
+<td align="right">6.3680191</td>
+<td align="right">11.161736</td>
+<td align="right">11.697873</td>
+<td align="right">11.288451</td>
+<td align="right">12.719646</td>
+<td align="right">13.757302</td>
+<td align="right">14.964783</td>
+<td align="right">14.71623</td>
+<td align="right">4.803344</td>
+<td align="right">-3.499969</td>
+<td align="right">12.67839</td>
+<td align="right">8.1579065</td>
+<td align="right">8.7770146</td>
+<td align="right">NA</td>
+<td align="right">4</td>
+<td align="right">2018</td>
+<td align="right">2</td>
+<td align="left">22.535</td>
+<td align="left">MULTIPOLYGON (((79.10574 19…</td>
 </tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
+<tr class="even">
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">5</td>
-<td align="left">SITALKUCHI</td>
-<td align="left">MULTIPOLYGON (((89.27169 26…</td>
-<td align="right">2016</td>
-<td align="right">-6.6809088</td>
-<td align="left">SITALKUCHI</td>
-<td align="right">16</td>
-<td align="left">11.335</td>
+<td align="left">ASIFABAD</td>
+<td align="right">0.4894921</td>
+<td align="right">0.5649003</td>
+<td align="right">6.489279</td>
+<td align="right">6.791655</td>
+<td align="right">6.141421</td>
+<td align="right">7.483316</td>
+<td align="right">7.489865</td>
+<td align="right">7.549194</td>
+<td align="right">15.40540</td>
+<td align="right">4.659613</td>
+<td align="right">-9.574004</td>
+<td align="right">21.84991</td>
+<td align="right">0.0875067</td>
+<td align="right">0.7921242</td>
+<td align="right">NA</td>
+<td align="right">5</td>
+<td align="right">2018</td>
+<td align="right">2</td>
+<td align="left">27.635</td>
+<td align="left">MULTIPOLYGON (((78.73274 19…</td>
 </tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
+<tr class="odd">
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">6</td>
-<td align="left">SITAI</td>
-<td align="left">MULTIPOLYGON (((89.46461 26…</td>
-<td align="right">2016</td>
-<td align="right">-6.5630426</td>
-<td align="left">SITAI</td>
-<td align="right">16</td>
-<td align="left">60.385</td>
+<td align="left">KHANAPUR</td>
+<td align="right">1.3173398</td>
+<td align="right">2.2638988</td>
+<td align="right">6.806900</td>
+<td align="right">7.355008</td>
+<td align="right">6.694963</td>
+<td align="right">7.929931</td>
+<td align="right">7.965712</td>
+<td align="right">8.267973</td>
+<td align="right">71.85383</td>
+<td align="right">8.052243</td>
+<td align="right">-8.974091</td>
+<td align="right">18.44622</td>
+<td align="right">0.4512194</td>
+<td align="right">3.7945242</td>
+<td align="right">NA</td>
+<td align="right">6</td>
+<td align="right">2018</td>
+<td align="right">2</td>
+<td align="left">33.525</td>
+<td align="left">MULTIPOLYGON (((78.59774 19…</td>
 </tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
+<tr class="even">
+<td align="left">ANDHRA_PRADESH</td>
 <td align="right">7</td>
-<td align="left">DINHATA</td>
-<td align="left">MULTIPOLYGON (((89.61986 26…</td>
-<td align="right">2016</td>
-<td align="right">-16.4603547</td>
-<td align="left">DINHATA</td>
-<td align="right">16</td>
-<td align="left">57.19</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">8</td>
-<td align="left">NATABARI</td>
-<td align="left">MULTIPOLYGON (((89.63836 26…</td>
-<td align="right">2016</td>
-<td align="right">-7.3640880</td>
-<td align="left">NATABARI</td>
-<td align="right">16</td>
-<td align="left">8.88</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">9</td>
-<td align="left">TUFANGANJ</td>
-<td align="left">MULTIPOLYGON (((89.69171 26…</td>
-<td align="right">2016</td>
-<td align="right">-10.2902312</td>
-<td align="left">TUFANGANJ</td>
-<td align="right">16</td>
-<td align="left">44.26</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">10</td>
-<td align="left">KUMARGRAM</td>
-<td align="left">MULTIPOLYGON (((89.64786 26…</td>
-<td align="right">2016</td>
-<td align="right">-16.6441258</td>
-<td align="left">KUMARGRAM</td>
-<td align="right">16</td>
-<td align="left">10.645</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">11</td>
-<td align="left">KALCHINI</td>
-<td align="left">MULTIPOLYGON (((89.30811 26…</td>
-<td align="right">2016</td>
-<td align="right">-21.4422824</td>
-<td align="left">KALCHINI</td>
-<td align="right">16</td>
-<td align="left">62.455</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">12</td>
-<td align="left">ALIPURDUARS</td>
-<td align="left">MULTIPOLYGON (((89.29861 26…</td>
-<td align="right">2016</td>
-<td align="right">-6.7465671</td>
-<td align="left">ALIPURDUARS</td>
-<td align="right">16</td>
-<td align="left">51.59</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">13</td>
-<td align="left">FALAKATA</td>
-<td align="left">MULTIPOLYGON (((89.30586 26…</td>
-<td align="right">2016</td>
-<td align="right">-11.2849502</td>
-<td align="left">FALAKATA</td>
-<td align="right">16</td>
-<td align="left">12.71</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">14</td>
-<td align="left">MADARIHAT</td>
-<td align="left">MULTIPOLYGON (((88.99836 26…</td>
-<td align="right">2016</td>
-<td align="right">-5.9455982</td>
-<td align="left">MADARIHAT</td>
-<td align="right">16</td>
-<td align="left">52.35</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">15</td>
-<td align="left">DHUPGURI</td>
-<td align="left">MULTIPOLYGON (((89.08761 26…</td>
-<td align="right">2016</td>
-<td align="right">-6.0157626</td>
-<td align="left">DHUPGURI</td>
-<td align="right">16</td>
-<td align="left">14.305</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">16</td>
-<td align="left">MAYNAGURI</td>
-<td align="left">MULTIPOLYGON (((88.75336 26…</td>
-<td align="right">2016</td>
-<td align="right">-5.0312886</td>
-<td align="left">MAYNAGURI</td>
-<td align="right">16</td>
-<td align="left">20.86</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">17</td>
-<td align="left">JALPAIGURI</td>
-<td align="left">MULTIPOLYGON (((88.60002 26…</td>
-<td align="right">2016</td>
-<td align="right">-6.3924287</td>
-<td align="left">JALPAIGURI</td>
-<td align="right">16</td>
-<td align="left">48.96</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">18</td>
-<td align="left">RAJGANJ</td>
-<td align="left">MULTIPOLYGON (((88.74711 26…</td>
-<td align="right">2016</td>
-<td align="right">-7.0147639</td>
-<td align="left">RAJGANJ</td>
-<td align="right">16</td>
-<td align="left">9.28</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">19</td>
-<td align="left">DABGRAM-FULBARI</td>
-<td align="left">MULTIPOLYGON (((88.40411 26…</td>
-<td align="right">2016</td>
-<td align="right">-1.4776493</td>
-<td align="left">DABGRAM-PHULBARI</td>
-<td align="right">16</td>
-<td align="left">7.63</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">20</td>
-<td align="left">MAL</td>
-<td align="left">MULTIPOLYGON (((88.51161 26…</td>
-<td align="right">2016</td>
-<td align="right">-7.1607931</td>
-<td align="left">MAL</td>
-<td align="right">16</td>
-<td align="left">59.975</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">21</td>
-<td align="left">NAGRAKATA</td>
-<td align="left">MULTIPOLYGON (((88.73761 26…</td>
-<td align="right">2016</td>
-<td align="right">-8.0357478</td>
-<td align="left">NAGRAKATA</td>
-<td align="right">16</td>
-<td align="left">65.61</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">22</td>
-<td align="left">KALIMPONG</td>
-<td align="left">MULTIPOLYGON (((88.87183 26…</td>
-<td align="right">2016</td>
-<td align="right">-30.0894069</td>
-<td align="left">KALIMPONG</td>
-<td align="right">16</td>
-<td align="left">50.94</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">23</td>
-<td align="left">DARJEELING</td>
-<td align="left">MULTIPOLYGON (((88.32324 27…</td>
-<td align="right">2019</td>
-<td align="right">0.6365529</td>
-<td align="left">DARJEELING</td>
-<td align="right">16</td>
-<td align="left">98.535</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">24</td>
-<td align="left">KURSEONG</td>
-<td align="left">MULTIPOLYGON (((88.41736 27…</td>
-<td align="right">2016</td>
-<td align="right">-7.4378749</td>
-<td align="left">KURSEONG</td>
-<td align="right">16</td>
-<td align="left">43.115</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">25</td>
-<td align="left">MATIGARA-NAXALBARI</td>
-<td align="left">MULTIPOLYGON (((88.40886 26…</td>
-<td align="right">2016</td>
-<td align="right">-0.8088804</td>
-<td align="left">MATIGARA-NAXALBARI</td>
-<td align="right">16</td>
-<td align="left">53.415</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">26</td>
-<td align="left">SILIGURI</td>
-<td align="left">MULTIPOLYGON (((88.40886 26…</td>
-<td align="right">2016</td>
-<td align="right">-0.1393440</td>
-<td align="left">SILIGURI</td>
-<td align="right">16</td>
-<td align="left">12.13</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">27</td>
-<td align="left">PHANSIDEWA</td>
-<td align="left">MULTIPOLYGON (((88.1673 26….</td>
-<td align="right">2016</td>
-<td align="right">-8.1914111</td>
-<td align="left">PHANSIDEWA</td>
-<td align="right">16</td>
-<td align="left">52.88</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">28</td>
-<td align="left">CHOPRA</td>
-<td align="left">MULTIPOLYGON (((88.21711 26…</td>
-<td align="right">2016</td>
-<td align="right">-7.2387196</td>
-<td align="left">CHOPRA</td>
-<td align="right">16</td>
-<td align="left">47.71</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">29</td>
-<td align="left">ISLAMPUR</td>
-<td align="left">MULTIPOLYGON (((88.14486 26…</td>
-<td align="right">2019</td>
-<td align="right">13.7864554</td>
-<td align="left">ISLAMPUR</td>
-<td align="right">16</td>
-<td align="left">50.15</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">30</td>
-<td align="left">GOALPOKHAR</td>
-<td align="left">MULTIPOLYGON (((88.06475 26…</td>
-<td align="right">2016</td>
-<td align="right">-5.1116212</td>
-<td align="left">GOALPOKHAR</td>
-<td align="right">16</td>
-<td align="left">52.835</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">31</td>
-<td align="left">CHAKULIA</td>
-<td align="left">MULTIPOLYGON (((87.81528 25…</td>
-<td align="right">2016</td>
-<td align="right">-5.5078094</td>
-<td align="left">CHAKULIA</td>
-<td align="right">16</td>
-<td align="left">49.03</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">32</td>
-<td align="left">KARANDIGHI</td>
-<td align="left">MULTIPOLYGON (((87.87123 25…</td>
-<td align="right">2016</td>
-<td align="right">-4.5128480</td>
-<td align="left">KARANDIGHI</td>
-<td align="right">16</td>
-<td align="left">46.87</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">33</td>
-<td align="left">HEMTABAD</td>
-<td align="left">MULTIPOLYGON (((88.05238 25…</td>
-<td align="right">2016</td>
-<td align="right">-6.3623354</td>
-<td align="left">HEMTABAD</td>
-<td align="right">16</td>
-<td align="left">28.595</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">34</td>
-<td align="left">KALIAGANJ</td>
-<td align="left">MULTIPOLYGON (((88.19136 25…</td>
-<td align="right">2019</td>
-<td align="right">7.4325114</td>
-<td align="left">KALIAGANJ</td>
-<td align="right">16</td>
-<td align="left">86.395</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">35</td>
-<td align="left">RAIGANJ</td>
-<td align="left">MULTIPOLYGON (((88.03894 25…</td>
-<td align="right">2016</td>
-<td align="right">1.0320250</td>
-<td align="left">RAIGANJ</td>
-<td align="right">16</td>
-<td align="left">42.395</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">36</td>
-<td align="left">ITAHAR</td>
-<td align="left">MULTIPOLYGON (((88.09086 25…</td>
-<td align="right">2016</td>
-<td align="right">-6.0669691</td>
-<td align="left">ITAHAR</td>
-<td align="right">16</td>
-<td align="left">14.5</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">37</td>
-<td align="left">KUSHMANDI</td>
-<td align="left">MULTIPOLYGON (((88.26861 25…</td>
-<td align="right">2016</td>
-<td align="right">-4.2514008</td>
-<td align="left">KUSHMANDI</td>
-<td align="right">16</td>
-<td align="left">51.3</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">38</td>
-<td align="left">KUMARGANJ</td>
-<td align="left">MULTIPOLYGON (((88.56836 25…</td>
-<td align="right">2016</td>
-<td align="right">-8.2661846</td>
-<td align="left">KUMARGANJ</td>
-<td align="right">16</td>
-<td align="left">12.17</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">39</td>
-<td align="left">BALURGHAT</td>
-<td align="left">MULTIPOLYGON (((88.76211 25…</td>
-<td align="right">2016</td>
-<td align="right">-8.6012334</td>
-<td align="left">BALURGHAT</td>
-<td align="right">16</td>
-<td align="left">13.975</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">40</td>
-<td align="left">TAPAN</td>
-<td align="left">MULTIPOLYGON (((88.60786 25…</td>
-<td align="right">2016</td>
-<td align="right">-7.3919238</td>
-<td align="left">TAPAN</td>
-<td align="right">16</td>
-<td align="left">12.49</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">41</td>
-<td align="left">GANGARAMPUR</td>
-<td align="left">MULTIPOLYGON (((88.61208 25…</td>
-<td align="right">2016</td>
-<td align="right">-5.3271470</td>
-<td align="left">GANGARAMPUR</td>
-<td align="right">16</td>
-<td align="left">55.45</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">42</td>
-<td align="left">HARIRAMPUR</td>
-<td align="left">MULTIPOLYGON (((88.41311 25…</td>
-<td align="right">2016</td>
-<td align="right">-3.3625053</td>
-<td align="left">HARIRAMPUR</td>
-<td align="right">16</td>
-<td align="left">11.65</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">43</td>
-<td align="left">HABIBPUR</td>
-<td align="left">MULTIPOLYGON (((88.40561 25…</td>
-<td align="right">2019</td>
-<td align="right">8.2420494</td>
-<td align="left">HABIBPUR</td>
-<td align="right">16</td>
-<td align="left">39.45</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">44</td>
-<td align="left">GAZOLE</td>
-<td align="left">MULTIPOLYGON (((88.27636 25…</td>
-<td align="right">2016</td>
-<td align="right">-6.4262286</td>
-<td align="left">GAZOLE</td>
-<td align="right">16</td>
-<td align="left">50.09</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">45</td>
-<td align="left">CHANCHAL</td>
-<td align="left">MULTIPOLYGON (((87.97561 25…</td>
-<td align="right">2016</td>
-<td align="right">-6.9369804</td>
-<td align="left">CHANCHAL</td>
-<td align="right">16</td>
-<td align="left">42.395</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">46</td>
-<td align="left">HARISCHANDRAPUR</td>
-<td align="left">MULTIPOLYGON (((87.86953 25…</td>
-<td align="right">2016</td>
-<td align="right">-3.6993446</td>
-<td align="left">HARISCHANDRAPUR</td>
-<td align="right">16</td>
-<td align="left">38.205</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">47</td>
-<td align="left">MALATIPUR</td>
-<td align="left">MULTIPOLYGON (((87.97561 25…</td>
-<td align="right">2016</td>
-<td align="right">-6.7006826</td>
-<td align="left">MALATIPUR</td>
-<td align="right">16</td>
-<td align="left">52.425</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">48</td>
-<td align="left">RATUA</td>
-<td align="left">MULTIPOLYGON (((88.04411 25…</td>
-<td align="right">2016</td>
-<td align="right">-4.3327404</td>
-<td align="left">RATUA</td>
-<td align="right">16</td>
-<td align="left">48.585</td>
-</tr>
-<tr class="odd">
-<td align="left">West_Bengal</td>
-<td align="right">49</td>
-<td align="left">MANICKCHAK</td>
-<td align="left">MULTIPOLYGON (((87.81807 25…</td>
-<td align="right">2016</td>
-<td align="right">-5.9573437</td>
-<td align="left">MANICKCHAK</td>
-<td align="right">16</td>
-<td align="left">54.81</td>
-</tr>
-<tr class="even">
-<td align="left">West_Bengal</td>
-<td align="right">50</td>
-<td align="left">MALDAHA</td>
-<td align="left">MULTIPOLYGON (((88.02936 25…</td>
-<td align="right">2016</td>
-<td align="right">-2.7037600</td>
-<td align="left">MALDAHA</td>
-<td align="right">16</td>
-<td align="left">42.625</td>
+<td align="left">ADILABAD</td>
+<td align="right">2.9263520</td>
+<td align="right">4.4463348</td>
+<td align="right">8.882252</td>
+<td align="right">8.972123</td>
+<td align="right">8.872417</td>
+<td align="right">9.928370</td>
+<td align="right">10.307904</td>
+<td align="right">10.852538</td>
+<td align="right">51.94122</td>
+<td align="right">1.011809</td>
+<td align="right">-1.111283</td>
+<td align="right">11.90151</td>
+<td align="right">3.8227296</td>
+<td align="right">5.2836527</td>
+<td align="right">NA</td>
+<td align="right">7</td>
+<td align="right">2018</td>
+<td align="right">2</td>
+<td align="left">7.955</td>
+<td align="left">MULTIPOLYGON (((78.59774 19…</td>
 </tr>
 </tbody>
 </table>
+<pre class="r"><code>kable(nrow(final))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">x</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">5744</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>final &lt;- final%&gt;%
+  mutate(volatility = as.numeric(volatility))%&gt;%
+  mutate(ngdelta_2019 = as.numeric(ngdelta_2019))%&gt;%
+  distinct(state, ac_no, ac_name, geometry, volatility, ngdelta_2019)
+st_write(final, &quot;./data/final.shp&quot;, delete_dsn = T)</code></pre>
+<pre><code>## Warning in abbreviate_shapefile_names(obj): Field names abbreviated for ESRI
+## Shapefile driver</code></pre>
+<pre><code>## Deleting source `./data/final.shp&#39; using driver `ESRI Shapefile&#39;
+## Writing layer `final&#39; to data source `./data/final.shp&#39; using driver `ESRI Shapefile&#39;
+## Writing 5742 features with 5 fields and geometry type Multi Polygon.</code></pre>
 </div>
 <div id="including-plots" class="section level2">
 <h2>Including Plots</h2>
