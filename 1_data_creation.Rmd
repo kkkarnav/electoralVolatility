@@ -23,8 +23,8 @@ library(exactextractr)
 general <- read.csv("../TCPD/TCPD_GE_All_States_2023-2-2.csv")
 assembly <- read.csv("../TCPD/All_States_AE.csv")
 
-assembly_shp <- st_read("../shp/india_assemblies.shp")
-assembly_shp_old <- st_read("../shp/AC_All_Final.shp")
+assembly_shp <- st_read("../shp/India_2014.geojson")
+assembly_shp_old <- st_read("../shp/India_2013.geojson")
 subdistricts_shp <- st_read("../shp/subdistrict.shp")
 ```
 
@@ -44,6 +44,9 @@ kable(head(assembly), caption="Assembly Elections Dataset")
 Some of the indicators used in Dash & Ferris are calculated at the constituency level, rather than being specific to candidate or party. These are the voter turnout (which indicates the level of democratic participation) and Effective Number of Parties (ENOP, which indicates the effective degree of choice that the voter has).
 
 ```{vote_stats}
+assembly <- assembly%>%
+  filter(Year > 2022)
+
 aggregate_electoral_indicators <- assembly %>%
   group_by(State_Name, Year, Constituency_Name)%>%
   summarize(total_votes=sum(Votes), Electors=first(Electors), Turnout_Percentage=first(Turnout_Percentage), ENOP=first(ENOP))
@@ -60,7 +63,7 @@ $$
 $$
 for each party _p_ between election _t_ and _t-1_. To calculate this, we first widen the dataset to get each party's voteshare in each election.
 
-``` {partywise}
+``` {r partywise}
 # Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
   filter(last_poll == TRUE)%>%
@@ -69,7 +72,7 @@ partywise_votes <- assembly %>%
   ungroup()
 ```
 
-``` {pivot}
+``` {r pivot}
 # Extract the list of parties
 party_list <- as.list(unique(partywise_votes$Party))
 
