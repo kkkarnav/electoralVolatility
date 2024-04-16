@@ -29,7 +29,7 @@ subdistricts_shp <- st_read("../shp/subdistrict.shp")
 
 We can now calculate electoral volatility using the Pedersen formula:
 
-``` {volatility}
+``` {r volatility}
 # Calculate the volatility by summing the deltas for each party
 partywise_deltas <- partywise_votes%>%
   group_by(State_Name, Constituency_No, Constituency_Name)%>%
@@ -45,14 +45,14 @@ volatility <- partywise_deltas%>%
   filter(volatility != 0)
 ```
 
-``` {volatility_table, echo=FALSE}
+``` {r volatility_table, echo=FALSE}
 kable(head(volatility, 10), caption="Volatility in Assembly Elections")%>%
   kable_styling(font_size=12)
 write.csv(partywise_deltas, "./data/partywise_deltas_constituency.csv", row.names=FALSE)
 write.csv(volatility, "./data/volatility_constituency.csv", row.names=FALSE)
 ```
 
-``` {r read}
+``` {read}
 volatility <- read.csv("./data/volatility_constituency.csv")
 ```
 

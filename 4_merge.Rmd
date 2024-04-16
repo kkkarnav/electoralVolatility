@@ -1,0 +1,126 @@
+---
+title: "temp"
+author: "Karnav Popat"
+date: "2024-04-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(sf)
+library(kableExtra)
+library(tidyr)
+library(dplyr)
+library(stringr)
+```
+
+```{r data, include=FALSE}
+nightlights_old <- st_read("./data/nightlights_constituency_old.shp")
+nightlights <- st_read("./data/nightlights_constituency.shp")
+volatility <- st_read("./data/volatility_constituency.csv")
+
+fuzzy_1991 <- read.csv("./data/fuzzy_nightlights_1991.csv")
+fuzzy_2006 <- read.csv("./data/fuzzy_nightlights_2006.csv")
+fuzzy_2013 <- read.csv("./data/fuzzy_nightlights_2013.csv")
+```
+
+```{r nightlight_delta}
+for (i in 1993:2013) {
+  prev_year <- paste0("ng_", i - 1)
+  year <- paste0("ng_", i)
+  nightlights_old[paste0("ngdelta_", i)] <- (nightlights_old[[year]] - nightlights_old[[prev_year]]) / nightlights_old[[prev_year]] * 100
+}
+for (i in 2015:2021) {
+  prev_year <- paste0("ng_", i - 1)
+  year <- paste0("ng_", i)
+  nightlights[paste0("ngdelta_", i)] <- (nightlights[[year]] - nightlights[[prev_year]]) / nightlights[[prev_year]] * 100
+}
+```
+
+``` {r means}
+volatility <- volatility%>%
+  filter(Year > 1989)%>%
+  filter(Year < 2014)%>%
+  mutate(State_Name = gsub(" ", "_", State_Name))%>%
+  mutate(Constituency_Name = gsub(" ", "_", Constituency_Name))%>%
+  mutate(State_Name = str_to_upper(State_Name))%>%
+  mutate(Constituency_Name = str_to_upper(Constituency_Name))%>%
+  mutate(State_Name = gsub("TELANGANA", "ANDHRA_PRADESH", State_Name))%>%
+  mutate(State_Name = gsub("ORISSA", "ODISHA", State_Name))%>%
+  mutate(Year = as.numeric(Year))%>%
+  mutate(Constituency_No = as.numeric(Constituency_No))%>%
+  mutate(Assembly_No = as.numeric(Assembly_No))%>%
+  arrange(Constituency_Name)
+
+nightlights_old <- nightlights_old%>%
+  mutate(state = gsub(" ", "_", state))%>%
+  mutate(ac_name = gsub(" ", "_", ac_name))%>%
+  mutate(state = str_to_upper(state))%>%
+  mutate(ac_name = str_to_upper(ac_name))%>%
+  mutate(state = gsub("TAMILNADU", "TAMIL_NADU", state))%>%
+  mutate(state = gsub("UTTARANCHAL", "UTTARAKHAND", state))%>%
+  mutate(state = gsub("ORISSA", "ODISHA", state))%>%
+  arrange(ac_name)
+
+nightlights <- nightlights%>%
+  mutate(state = gsub(" ", "_", state))%>%
+  mutate(ac_name = gsub(" ", "_", ac_name))%>%
+  mutate(state = str_to_upper(state))%>%
+  mutate(ac_name = str_to_upper(ac_name))%>%
+  # mutate(state = gsub("TELANGANA", "ANDHRA_PRADESH", state))%>%
+  mutate(state = gsub("ORISSA", "ODISHA", state))%>%
+  mutate(ac_no = as.numeric(ac_no))%>%
+  arrange(ac_name)
+
+fuzzy_2013 <- fuzzy_2013%>%
+  mutate(state = gsub(" ", "_", state))%>%
+  mutate(ac_name = gsub(" ", "_", ac_name))%>%
+  mutate(state = str_to_upper(state))%>%
+  mutate(ac_name = str_to_upper(ac_name))
+
+kable(head(nightlights_old, 10))
+kable(nrow(nightlights_old))
+kable(head(nightlights, 10))
+kable(nrow(nightlights))
+kable(head(volatility, 10))
+kable(nrow(volatility))
+```
+
+``` {fuzzy}
+kable(head(fuzzy_2013))
+kable(nrow(fuzzy_2013))
+```
+
+``` {r merge_old_data}
+sf_use_s2(FALSE)
+old_data <- inner_join(nightlights_old, volatility, by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))
+# temp <- inner_join(nightlights, fuzzy_2013, by = c("state" = "state", "ac_name" = "ac_name"))
+# temp <- inner_join(temp, volatility, by = c("state" = "State_Name", "matched_name" = "Constituency_Name"))
+kable(head(old_data))
+kable(nrow(old_data))
+```
+
+``` {r write_old_data}
+old_data <- old_data%>%
+  mutate(volatility = as.numeric(volatility))%>%
+  mutate(ngdelta_1993 = as.numeric(ngdelta_1993))
+st_write(old_data, "./data/matched_dataset_1992.shp", delete_dsn = T)
+```
+
+``` {merge_data}
+sf_use_s2(FALSE)
+new_data <- inner_join(nightlights, volatility, by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))
+# temp <- inner_join(nightlights, fuzzy_2013, by = c("state" = "state", "ac_name" = "ac_name"))
+# temp <- inner_join(temp, volatility, by = c("state" = "State_Name", "matched_name" = "Constituency_Name"))
+kable(head(new_data))
+kable(nrow(new_data))
+```
+
+``` {write_data}
+new_data <- new_data%>%
+  mutate(volatility = as.numeric(volatility))%>%
+  mutate(ngdelta_2021 = as.numeric(ngdelta_2021))
+st_write(new_data, "./data/matched_dataset_2013.shp", delete_dsn = T)
+```
+
+
