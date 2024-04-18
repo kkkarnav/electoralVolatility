@@ -38,9 +38,13 @@ for (i in 2015:2021) {
 ```
 
 ``` {r means}
+
+start_year = 2008
+end_year = 2014
+
 volatility <- volatility%>%
-  filter(Year > 1989)%>%
-  filter(Year < 2014)%>%
+  filter(Year >= start_year)%>%
+  filter(Year <= end_year)%>%
   mutate(State_Name = gsub(" ", "_", State_Name))%>%
   mutate(Constituency_Name = gsub(" ", "_", Constituency_Name))%>%
   mutate(State_Name = str_to_upper(State_Name))%>%
@@ -91,7 +95,7 @@ kable(head(fuzzy_2013))
 kable(nrow(fuzzy_2013))
 ```
 
-``` {r merge_old_data}
+``` {merge_old_data}
 sf_use_s2(FALSE)
 old_data <- inner_join(nightlights_old, volatility, by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))
 # temp <- inner_join(nightlights, fuzzy_2013, by = c("state" = "state", "ac_name" = "ac_name"))
@@ -100,14 +104,13 @@ kable(head(old_data))
 kable(nrow(old_data))
 ```
 
-``` {r write_old_data}
+``` {write_old_data}
 old_data <- old_data%>%
-  mutate(volatility = as.numeric(volatility))%>%
-  mutate(ngdelta_1993 = as.numeric(ngdelta_1993))
-st_write(old_data, "./data/matched_dataset_1992.shp", delete_dsn = T)
+  mutate(volatility = as.numeric(volatility))
+st_write(old_data, "./data/matched_dataset_2010_1.shp", delete_dsn = T)
 ```
 
-``` {merge_data}
+``` {r merge_data}
 sf_use_s2(FALSE)
 new_data <- inner_join(nightlights, volatility, by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))
 # temp <- inner_join(nightlights, fuzzy_2013, by = c("state" = "state", "ac_name" = "ac_name"))
@@ -116,11 +119,8 @@ kable(head(new_data))
 kable(nrow(new_data))
 ```
 
-``` {write_data}
+``` {r write_data}
 new_data <- new_data%>%
-  mutate(volatility = as.numeric(volatility))%>%
-  mutate(ngdelta_2021 = as.numeric(ngdelta_2021))
-st_write(new_data, "./data/matched_dataset_2013.shp", delete_dsn = T)
+  mutate(volatility = as.numeric(volatility))
+st_write(new_data, "./data/matched_dataset_2010_2.shp", delete_dsn = T)
 ```
-
-

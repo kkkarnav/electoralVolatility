@@ -1,0 +1,83 @@
+---
+title: "Where Does The Buck Stop? Economic Conditions & Electoral Volatility"
+author: "Karnav Popat & Shashwat Agarwal"
+date: "21/03/2024"
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: vignette
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(kableExtra)
+library(sf)
+library(raster)
+library(exactextractr)
+```
+
+```{r data, include=FALSE}
+# partywise_votes <- read.csv("./data/partywise_voteshare_constituency.csv")
+# volatility <- read.csv("./data/volatility_constituency.csv")
+
+panel <- st_read("./data/processed_dataset_new.shp")
+```
+
+``` {r tables, echo=FALSE}
+kable(head(panel))
+kable(nrow(panel))
+```
+
+``` {r preprocess}
+panel <- panel%>%
+  rename(election_year = elctn_y,
+         volatility = voltlty,
+         delta_year = delt_yr,
+         nightlights = nghtlgh,
+         mean_nightlights = mn_nght,
+         adjusted_nightlights = adjstd_,
+         absolute_change = abslt_c,
+         relative_change = rltv_ch)
+
+panel <- panel%>%
+  mutate(election = paste0(state, as.character(election_year)))%>%
+  filter((election_year-1) == delta_year)%>%
+  filter(!is.na(nightlights))%>%
+  filter(is.finite(nightlights))%>%
+  filter(nightlights >= 5)%>%
+  filter(relative_change < 50)%>%
+  filter(relative_change > -10)%>%
+  filter(!is.na(relative_change))%>%
+  filter(is.finite(relative_change))%>%
+  filter(!is.na(volatility))%>%
+  filter(is.finite(volatility))
+
+kable(head(panel))
+kable(nrow(panel))
+```
+
+``` {r model}
+model1 <- lm(volatility ~ relative_change, data = panel)
+summary(model1)
+
+model2 <- lm(volatility ~ relative_change + factor(election_year), data = panel)
+summary(model2)
+
+model3 <- lm(volatility ~ relative_change + factor(state), data = panel)
+summary(model3)
+
+
+ggplot(panel, aes(x = relative_change, y = volatility)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") + 
+  labs(title = "Our bivariate regression")
+
+ggplot(panel, aes(x = relative_change, y = volatility)) +
+  geom_point() +
+  facet_wrap(~election_year) +
+  geom_smooth(method = "lm", color = "blue") + 
+  labs(title = "Our bivariate regression")
+```

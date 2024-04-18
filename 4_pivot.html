@@ -357,158 +357,47 @@ display: none;
 </div>
 
 
-<pre class="r"><code>for (i in 1993:2013) {
-  prev_year &lt;- paste0(&quot;ng_&quot;, i - 1)
-  year &lt;- paste0(&quot;ng_&quot;, i)
-  nightlights_old[paste0(&quot;ngdelta_&quot;, i)] &lt;- (nightlights_old[[year]] - nightlights_old[[prev_year]]) / nightlights_old[[prev_year]] * 100
-}
-for (i in 2015:2021) {
-  prev_year &lt;- paste0(&quot;ng_&quot;, i - 1)
-  year &lt;- paste0(&quot;ng_&quot;, i)
-  nightlights[paste0(&quot;ngdelta_&quot;, i)] &lt;- (nightlights[[year]] - nightlights[[prev_year]]) / nightlights[[prev_year]] * 100
-}</code></pre>
-<pre class="r"><code>start_year = 2008
-end_year = 2014
+<pre class="r"><code>matched &lt;- rbind(matched_1990, matched_1995)
+matched &lt;- rbind(matched, matched_2000)
+matched &lt;- rbind(matched, matched_2005)
+matched &lt;- rbind(matched, matched_2010_1)
 
-volatility &lt;- volatility%&gt;%
-  filter(Year &gt;= start_year)%&gt;%
-  filter(Year &lt;= end_year)%&gt;%
-  mutate(State_Name = gsub(&quot; &quot;, &quot;_&quot;, State_Name))%&gt;%
-  mutate(Constituency_Name = gsub(&quot; &quot;, &quot;_&quot;, Constituency_Name))%&gt;%
-  mutate(State_Name = str_to_upper(State_Name))%&gt;%
-  mutate(Constituency_Name = str_to_upper(Constituency_Name))%&gt;%
-  mutate(State_Name = gsub(&quot;TELANGANA&quot;, &quot;ANDHRA_PRADESH&quot;, State_Name))%&gt;%
-  mutate(State_Name = gsub(&quot;ORISSA&quot;, &quot;ODISHA&quot;, State_Name))%&gt;%
-  mutate(Year = as.numeric(Year))%&gt;%
-  mutate(Constituency_No = as.numeric(Constituency_No))%&gt;%
-  mutate(Assembly_No = as.numeric(Assembly_No))%&gt;%
-  arrange(Constituency_Name)
-
-nightlights_old &lt;- nightlights_old%&gt;%
-  mutate(state = gsub(&quot; &quot;, &quot;_&quot;, state))%&gt;%
-  mutate(ac_name = gsub(&quot; &quot;, &quot;_&quot;, ac_name))%&gt;%
-  mutate(state = str_to_upper(state))%&gt;%
-  mutate(ac_name = str_to_upper(ac_name))%&gt;%
-  mutate(state = gsub(&quot;TAMILNADU&quot;, &quot;TAMIL_NADU&quot;, state))%&gt;%
-  mutate(state = gsub(&quot;UTTARANCHAL&quot;, &quot;UTTARAKHAND&quot;, state))%&gt;%
-  mutate(state = gsub(&quot;ORISSA&quot;, &quot;ODISHA&quot;, state))%&gt;%
+matched &lt;- matched%&gt;%
+  pivot_longer(cols = starts_with(&quot;ng_&quot;),
+                          names_to = &quot;nightlight_year&quot;,
+                          values_to = &quot;nightlights&quot;)%&gt;%
+  mutate(election_year = Year)%&gt;%
+  mutate(volatility = voltlty)%&gt;%
+  mutate(delta_year = gsub(&quot;ng_&quot;, &quot;&quot;, nightlight_year))%&gt;%
   arrange(ac_name)
 
-nightlights &lt;- nightlights%&gt;%
-  mutate(state = gsub(&quot; &quot;, &quot;_&quot;, state))%&gt;%
-  mutate(ac_name = gsub(&quot; &quot;, &quot;_&quot;, ac_name))%&gt;%
-  mutate(state = str_to_upper(state))%&gt;%
-  mutate(ac_name = str_to_upper(ac_name))%&gt;%
-  # mutate(state = gsub(&quot;TELANGANA&quot;, &quot;ANDHRA_PRADESH&quot;, state))%&gt;%
-  mutate(state = gsub(&quot;ORISSA&quot;, &quot;ODISHA&quot;, state))%&gt;%
-  mutate(ac_no = as.numeric(ac_no))%&gt;%
-  arrange(ac_name)
+matched &lt;- matched[, c(&quot;state&quot;, &quot;ac_no&quot;, &quot;ac_name&quot;, &quot;Cnstt_N&quot;, &quot;Assmb_N&quot;, &quot;election_year&quot;, &quot;volatility&quot;, &quot;delta_year&quot;, &quot;nightlights&quot;, &quot;geometry&quot;)]
 
-fuzzy_2013 &lt;- fuzzy_2013%&gt;%
-  mutate(state = gsub(&quot; &quot;, &quot;_&quot;, state))%&gt;%
-  mutate(ac_name = gsub(&quot; &quot;, &quot;_&quot;, ac_name))%&gt;%
-  mutate(state = str_to_upper(state))%&gt;%
-  mutate(ac_name = str_to_upper(ac_name))
-
-kable(head(nightlights_old, 10))</code></pre>
+kable(head(matched))</code></pre>
 <table>
 <colgroup>
-<col width="2%" />
-<col width="1%" />
-<col width="3%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="1%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
-<col width="2%" />
+<col width="6%" />
 <col width="5%" />
+<col width="6%" />
+<col width="6%" />
+<col width="6%" />
+<col width="11%" />
+<col width="9%" />
+<col width="9%" />
+<col width="10%" />
+<col width="26%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">state</th>
 <th align="right">ac_no</th>
 <th align="left">ac_name</th>
-<th align="right">ng_1992</th>
-<th align="right">ng_1993</th>
-<th align="right">ng_1994</th>
-<th align="right">ng_1995</th>
-<th align="right">ng_1996</th>
-<th align="right">ng_1997</th>
-<th align="right">ng_1998</th>
-<th align="right">ng_1999</th>
-<th align="right">ng_2000</th>
-<th align="right">ng_2001</th>
-<th align="right">ng_2002</th>
-<th align="right">ng_2003</th>
-<th align="right">ng_2004</th>
-<th align="right">ng_2005</th>
-<th align="right">ng_2006</th>
-<th align="right">ng_2007</th>
-<th align="right">ng_2008</th>
-<th align="right">ng_2009</th>
-<th align="right">ng_2010</th>
-<th align="right">ng_2011</th>
-<th align="right">ng_2012</th>
-<th align="right">ng_2013</th>
-<th align="right">ngdelta_1993</th>
-<th align="right">ngdelta_1994</th>
-<th align="right">ngdelta_1995</th>
-<th align="right">ngdelta_1996</th>
-<th align="right">ngdelta_1997</th>
-<th align="right">ngdelta_1998</th>
-<th align="right">ngdelta_1999</th>
-<th align="right">ngdelta_2000</th>
-<th align="right">ngdelta_2001</th>
-<th align="right">ngdelta_2002</th>
-<th align="right">ngdelta_2003</th>
-<th align="right">ngdelta_2004</th>
-<th align="right">ngdelta_2005</th>
-<th align="right">ngdelta_2006</th>
-<th align="right">ngdelta_2007</th>
-<th align="right">ngdelta_2008</th>
-<th align="right">ngdelta_2009</th>
-<th align="right">ngdelta_2010</th>
-<th align="right">ngdelta_2011</th>
-<th align="right">ngdelta_2012</th>
-<th align="right">ngdelta_2013</th>
+<th align="right">Cnstt_N</th>
+<th align="right">Assmb_N</th>
+<th align="right">election_year</th>
+<th align="right">volatility</th>
+<th align="left">delta_year</th>
+<th align="right">nightlights</th>
 <th align="left">geometry</th>
 </tr>
 </thead>
@@ -517,883 +406,77 @@ kable(head(nightlights_old, 10))</code></pre>
 <td align="left">GUJARAT</td>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">1990</td>
+<td align="right">62.465</td>
+<td align="left">1992</td>
 <td align="right">0.3501222</td>
-<td align="right">0.5593901</td>
-<td align="right">0.5101482</td>
-<td align="right">0.914690</td>
-<td align="right">1.106572</td>
-<td align="right">1.081147</td>
-<td align="right">1.154232</td>
-<td align="right">1.103105</td>
-<td align="right">1.112453</td>
-<td align="right">1.250522</td>
-<td align="right">1.429118</td>
-<td align="right">1.3465947</td>
-<td align="right">1.477994</td>
-<td align="right">1.972260</td>
-<td align="right">1.509828</td>
-<td align="right">2.148040</td>
-<td align="right">2.286016</td>
-<td align="right">1.908029</td>
-<td align="right">2.271962</td>
-<td align="right">2.146359</td>
-<td align="right">2.409729</td>
-<td align="right">1.845906</td>
-<td align="right">59.769962</td>
-<td align="right">-8.802783</td>
-<td align="right">79.298872</td>
-<td align="right">20.977832</td>
-<td align="right">-2.297654</td>
-<td align="right">6.759924</td>
-<td align="right">-4.429461</td>
-<td align="right">0.8473425</td>
-<td align="right">12.411283</td>
-<td align="right">14.281678</td>
-<td align="right">-5.7744012</td>
-<td align="right">9.757893</td>
-<td align="right">33.4416975</td>
-<td align="right">-23.446800</td>
-<td align="right">42.270467</td>
-<td align="right">6.423353</td>
-<td align="right">-16.534750</td>
-<td align="right">19.073740</td>
-<td align="right">-5.528351</td>
-<td align="right">12.2705244</td>
-<td align="right">-23.397780</td>
 <td align="left">MULTIPOLYGON (((68.76136 23…</td>
 </tr>
 <tr class="even">
-<td align="left">CHHATTISGARH</td>
-<td align="right">42</td>
-<td align="left">ABHANPUR</td>
-<td align="right">3.2648449</td>
-<td align="right">2.2875681</td>
-<td align="right">3.5022378</td>
-<td align="right">4.860223</td>
-<td align="right">5.048956</td>
-<td align="right">4.714647</td>
-<td align="right">4.977586</td>
-<td align="right">3.872783</td>
-<td align="right">5.207672</td>
-<td align="right">4.512969</td>
-<td align="right">5.464572</td>
-<td align="right">5.2373939</td>
-<td align="right">7.774279</td>
-<td align="right">6.968529</td>
-<td align="right">5.580316</td>
-<td align="right">6.899284</td>
-<td align="right">8.088764</td>
-<td align="right">9.762571</td>
-<td align="right">8.915573</td>
-<td align="right">9.481379</td>
-<td align="right">10.103671</td>
-<td align="right">10.402988</td>
-<td align="right">-29.933330</td>
-<td align="right">53.098734</td>
-<td align="right">38.774794</td>
-<td align="right">3.883219</td>
-<td align="right">-6.621360</td>
-<td align="right">5.577066</td>
-<td align="right">-22.195566</td>
-<td align="right">34.4684780</td>
-<td align="right">-13.339994</td>
-<td align="right">21.085975</td>
-<td align="right">-4.1572899</td>
-<td align="right">48.437932</td>
-<td align="right">-10.3643098</td>
-<td align="right">-19.921180</td>
-<td align="right">23.636096</td>
-<td align="right">17.240626</td>
-<td align="right">20.692990</td>
-<td align="right">-8.675975</td>
-<td align="right">6.346260</td>
-<td align="right">6.5633127</td>
-<td align="right">2.962452</td>
-<td align="left">MULTIPOLYGON (((82.01436 21…</td>
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">1990</td>
+<td align="right">62.465</td>
+<td align="left">1993</td>
+<td align="right">0.5593901</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
 </tr>
-<tr class="odd">
-<td align="left">ASSAM</td>
-<td align="right">34</td>
-<td align="left">ABHAYAPURI_NORTH</td>
-<td align="right">0.8067109</td>
-<td align="right">0.3570196</td>
-<td align="right">0.7400225</td>
-<td align="right">0.618881</td>
-<td align="right">1.503343</td>
-<td align="right">1.187529</td>
-<td align="right">1.326868</td>
-<td align="right">1.653138</td>
-<td align="right">1.914930</td>
-<td align="right">1.479772</td>
-<td align="right">1.889803</td>
-<td align="right">1.2283833</td>
-<td align="right">2.098728</td>
-<td align="right">1.918795</td>
-<td align="right">2.125015</td>
-<td align="right">2.566898</td>
-<td align="right">2.499515</td>
-<td align="right">2.639121</td>
-<td align="right">2.831013</td>
-<td align="right">2.889002</td>
-<td align="right">2.559507</td>
-<td align="right">2.182080</td>
-<td align="right">-55.743794</td>
-<td align="right">107.277811</td>
-<td align="right">-16.369975</td>
-<td align="right">142.913138</td>
-<td align="right">-21.007438</td>
-<td align="right">11.733498</td>
-<td align="right">24.589509</td>
-<td align="right">15.8360573</td>
-<td align="right">-22.724489</td>
-<td align="right">27.709035</td>
-<td align="right">-34.9993929</td>
-<td align="right">70.852835</td>
-<td align="right">-8.5734187</td>
-<td align="right">10.747372</td>
-<td align="right">20.794340</td>
-<td align="right">-2.625059</td>
-<td align="right">5.585332</td>
-<td align="right">7.271043</td>
-<td align="right">2.048327</td>
-<td align="right">-11.4051413</td>
-<td align="right">-14.746077</td>
-<td align="left">MULTIPOLYGON (((90.83296 26…</td>
-</tr>
-<tr class="even">
-<td align="left">ASSAM</td>
-<td align="right">35</td>
-<td align="left">ABHAYAPURI_SOUTH</td>
-<td align="right">1.2173023</td>
-<td align="right">0.8648137</td>
-<td align="right">0.8986607</td>
-<td align="right">1.063229</td>
-<td align="right">1.638612</td>
-<td align="right">1.325000</td>
-<td align="right">1.789670</td>
-<td align="right">2.006292</td>
-<td align="right">1.974654</td>
-<td align="right">1.602422</td>
-<td align="right">1.626421</td>
-<td align="right">0.9404036</td>
-<td align="right">1.618019</td>
-<td align="right">1.514940</td>
-<td align="right">1.494390</td>
-<td align="right">2.097439</td>
-<td align="right">2.288250</td>
-<td align="right">2.916181</td>
-<td align="right">2.765616</td>
-<td align="right">3.008931</td>
-<td align="right">2.992559</td>
-<td align="right">2.274605</td>
-<td align="right">-28.956540</td>
-<td align="right">3.913795</td>
-<td align="right">18.312651</td>
-<td align="right">54.116475</td>
-<td align="right">-19.138893</td>
-<td align="right">35.069507</td>
-<td align="right">12.103997</td>
-<td align="right">-1.5769404</td>
-<td align="right">-18.850504</td>
-<td align="right">1.497662</td>
-<td align="right">-42.1795543</td>
-<td align="right">72.055821</td>
-<td align="right">-6.3706888</td>
-<td align="right">-1.356529</td>
-<td align="right">40.354239</td>
-<td align="right">9.097351</td>
-<td align="right">27.441496</td>
-<td align="right">-5.163094</td>
-<td align="right">8.797895</td>
-<td align="right">-0.5441202</td>
-<td align="right">-23.991302</td>
-<td align="left">MULTIPOLYGON (((90.65576 26…</td>
-</tr>
-<tr class="odd">
-<td align="left">PUNJAB</td>
-<td align="right">91</td>
-<td align="left">ABOHAR</td>
-<td align="right">7.6143107</td>
-<td align="right">7.0205655</td>
-<td align="right">6.5385189</td>
-<td align="right">8.791254</td>
-<td align="right">9.203103</td>
-<td align="right">10.047042</td>
-<td align="right">9.551461</td>
-<td align="right">10.162783</td>
-<td align="right">9.928309</td>
-<td align="right">10.759050</td>
-<td align="right">10.468607</td>
-<td align="right">10.3319426</td>
-<td align="right">12.507962</td>
-<td align="right">12.452810</td>
-<td align="right">12.891074</td>
-<td align="right">13.474798</td>
-<td align="right">12.714555</td>
-<td align="right">14.877774</td>
-<td align="right">11.880668</td>
-<td align="right">11.698312</td>
-<td align="right">13.751375</td>
-<td align="right">13.092321</td>
-<td align="right">-7.797754</td>
-<td align="right">-6.866208</td>
-<td align="right">34.453294</td>
-<td align="right">4.684759</td>
-<td align="right">9.170155</td>
-<td align="right">-4.932603</td>
-<td align="right">6.400292</td>
-<td align="right">-2.3071755</td>
-<td align="right">8.367396</td>
-<td align="right">-2.699527</td>
-<td align="right">-1.3054687</td>
-<td align="right">21.061090</td>
-<td align="right">-0.4409346</td>
-<td align="right">3.519398</td>
-<td align="right">4.528125</td>
-<td align="right">-5.641965</td>
-<td align="right">17.013725</td>
-<td align="right">-20.144858</td>
-<td align="right">-1.534896</td>
-<td align="right">17.5500827</td>
-<td align="right">-4.792639</td>
-<td align="left">MULTIPOLYGON (((74.17286 30…</td>
-</tr>
-<tr class="even">
-<td align="left">NAGALAND</td>
-<td align="right">47</td>
-<td align="left">ABOI</td>
-<td align="right">0.0000000</td>
-<td align="right">0.0000000</td>
-<td align="right">0.0000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.0000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.000000</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="right">NaN</td>
-<td align="left">MULTIPOLYGON (((94.99486 26…</td>
-</tr>
-<tr class="odd">
-<td align="left">MAHARASHTRA</td>
-<td align="right">120</td>
-<td align="left">ACHALPUR</td>
-<td align="right">3.1096244</td>
-<td align="right">4.3408170</td>
-<td align="right">3.6456623</td>
-<td align="right">4.944682</td>
-<td align="right">5.141878</td>
-<td align="right">4.237717</td>
-<td align="right">5.196708</td>
-<td align="right">5.346630</td>
-<td align="right">5.886188</td>
-<td align="right">5.976941</td>
-<td align="right">5.567691</td>
-<td align="right">5.5440440</td>
-<td align="right">6.509968</td>
-<td align="right">4.829148</td>
-<td align="right">3.189225</td>
-<td align="right">4.703486</td>
-<td align="right">4.139670</td>
-<td align="right">4.578159</td>
-<td align="right">4.385983</td>
-<td align="right">5.356209</td>
-<td align="right">6.161306</td>
-<td align="right">5.667400</td>
-<td align="right">39.592968</td>
-<td align="right">-16.014374</td>
-<td align="right">35.631916</td>
-<td align="right">3.988043</td>
-<td align="right">-17.584248</td>
-<td align="right">22.629886</td>
-<td align="right">2.884940</td>
-<td align="right">10.0915525</td>
-<td align="right">1.541797</td>
-<td align="right">-6.847137</td>
-<td align="right">-0.4247238</td>
-<td align="right">17.422738</td>
-<td align="right">-25.8191806</td>
-<td align="right">-33.958846</td>
-<td align="right">47.480533</td>
-<td align="right">-11.987196</td>
-<td align="right">10.592365</td>
-<td align="right">-4.197667</td>
-<td align="right">22.121068</td>
-<td align="right">15.0310898</td>
-<td align="right">-8.016255</td>
-<td align="left">MULTIPOLYGON (((77.88896 21…</td>
-</tr>
-<tr class="even">
-<td align="left">ANDHRA_PRADESH</td>
-<td align="right">188</td>
-<td align="left">ACHAMPET</td>
-<td align="right">0.5325263</td>
-<td align="right">1.3510619</td>
-<td align="right">1.0293531</td>
-<td align="right">1.101917</td>
-<td align="right">1.690505</td>
-<td align="right">1.312158</td>
-<td align="right">1.709240</td>
-<td align="right">1.924073</td>
-<td align="right">1.735288</td>
-<td align="right">1.897055</td>
-<td align="right">2.055426</td>
-<td align="right">1.9436512</td>
-<td align="right">2.683088</td>
-<td align="right">2.142782</td>
-<td align="right">1.926606</td>
-<td align="right">2.663769</td>
-<td align="right">2.532924</td>
-<td align="right">3.113448</td>
-<td align="right">2.797818</td>
-<td align="right">3.153232</td>
-<td align="right">3.436047</td>
-<td align="right">3.352245</td>
-<td align="right">153.708015</td>
-<td align="right">-23.811551</td>
-<td align="right">7.049465</td>
-<td align="right">53.414954</td>
-<td align="right">-22.380711</td>
-<td align="right">30.261715</td>
-<td align="right">12.568935</td>
-<td align="right">-9.8117346</td>
-<td align="right">9.322177</td>
-<td align="right">8.348242</td>
-<td align="right">-5.4380194</td>
-<td align="right">38.043702</td>
-<td align="right">-20.1374536</td>
-<td align="right">-10.088589</td>
-<td align="right">38.262265</td>
-<td align="right">-4.912037</td>
-<td align="right">22.919126</td>
-<td align="right">-10.137612</td>
-<td align="right">12.703243</td>
-<td align="right">8.9690505</td>
-<td align="right">-2.438914</td>
-<td align="left">MULTIPOLYGON (((78.65806 16…</td>
-</tr>
-<tr class="odd">
-<td align="left">ANDHRA_PRADESH</td>
-<td align="right">61</td>
-<td align="left">ACHANTA</td>
-<td align="right">4.0334272</td>
-<td align="right">4.9689698</td>
-<td align="right">4.7724724</td>
-<td align="right">10.750124</td>
-<td align="right">4.991235</td>
-<td align="right">5.635143</td>
-<td align="right">6.205786</td>
-<td align="right">6.544591</td>
-<td align="right">6.357774</td>
-<td align="right">6.245477</td>
-<td align="right">6.366899</td>
-<td align="right">7.4021382</td>
-<td align="right">7.486478</td>
-<td align="right">7.062567</td>
-<td align="right">6.597062</td>
-<td align="right">7.551626</td>
-<td align="right">7.155956</td>
-<td align="right">8.168872</td>
-<td align="right">7.254050</td>
-<td align="right">7.893048</td>
-<td align="right">9.373692</td>
-<td align="right">8.352788</td>
-<td align="right">23.194731</td>
-<td align="right">-3.954490</td>
-<td align="right">125.252723</td>
-<td align="right">-53.570445</td>
-<td align="right">12.900776</td>
-<td align="right">10.126512</td>
-<td align="right">5.459505</td>
-<td align="right">-2.8545276</td>
-<td align="right">-1.766303</td>
-<td align="right">1.944171</td>
-<td align="right">16.2596998</td>
-<td align="right">1.139395</td>
-<td align="right">-5.6623505</td>
-<td align="right">-6.591167</td>
-<td align="right">14.469534</td>
-<td align="right">-5.239533</td>
-<td align="right">14.154868</td>
-<td align="right">-11.198873</td>
-<td align="right">8.808838</td>
-<td align="right">18.7588342</td>
-<td align="right">-10.891158</td>
-<td align="left">MULTIPOLYGON (((81.88046 16…</td>
-</tr>
-<tr class="even">
-<td align="left">TAMIL_NADU</td>
-<td align="right">24</td>
-<td align="left">ACHARAPAKKAM</td>
-<td align="right">2.3182554</td>
-<td align="right">4.2009778</td>
-<td align="right">3.8167319</td>
-<td align="right">4.804206</td>
-<td align="right">4.755992</td>
-<td align="right">4.598759</td>
-<td align="right">5.174403</td>
-<td align="right">5.694028</td>
-<td align="right">6.081126</td>
-<td align="right">7.229600</td>
-<td align="right">6.957105</td>
-<td align="right">8.1758299</td>
-<td align="right">8.594027</td>
-<td align="right">7.846016</td>
-<td align="right">7.295019</td>
-<td align="right">8.540247</td>
-<td align="right">7.843807</td>
-<td align="right">9.400230</td>
-<td align="right">8.475480</td>
-<td align="right">8.151261</td>
-<td align="right">8.917472</td>
-<td align="right">8.892584</td>
-<td align="right">81.212896</td>
-<td align="right">-9.146582</td>
-<td align="right">25.872238</td>
-<td align="right">-1.003568</td>
-<td align="right">-3.306013</td>
-<td align="right">12.517388</td>
-<td align="right">10.042215</td>
-<td align="right">6.7983213</td>
-<td align="right">18.885880</td>
-<td align="right">-3.769168</td>
-<td align="right">17.5177069</td>
-<td align="right">5.115036</td>
-<td align="right">-8.7038492</td>
-<td align="right">-7.022632</td>
-<td align="right">17.069570</td>
-<td align="right">-8.154802</td>
-<td align="right">19.842708</td>
-<td align="right">-9.837528</td>
-<td align="right">-3.825373</td>
-<td align="right">9.3999017</td>
-<td align="right">-0.279093</td>
-<td align="left">MULTIPOLYGON (((80.05936 12…</td>
-</tr>
-</tbody>
-</table>
-<pre class="r"><code>kable(nrow(nightlights_old))</code></pre>
-<table>
-<thead>
-<tr class="header">
-<th align="right">x</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="right">4109</td>
-</tr>
-</tbody>
-</table>
-<pre class="r"><code>kable(head(nightlights, 10))</code></pre>
-<table>
-<colgroup>
-<col width="6%" />
-<col width="2%" />
-<col width="7%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="5%" />
-<col width="5%" />
-<col width="5%" />
-<col width="5%" />
-<col width="5%" />
-<col width="5%" />
-<col width="5%" />
-<col width="12%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">state</th>
-<th align="right">ac_no</th>
-<th align="left">ac_name</th>
-<th align="right">ng_2014</th>
-<th align="right">ng_2015</th>
-<th align="right">ng_2016</th>
-<th align="right">ng_2017</th>
-<th align="right">ng_2018</th>
-<th align="right">ng_2019</th>
-<th align="right">ng_2020</th>
-<th align="right">ng_2021</th>
-<th align="right">ngdelta_2015</th>
-<th align="right">ngdelta_2016</th>
-<th align="right">ngdelta_2017</th>
-<th align="right">ngdelta_2018</th>
-<th align="right">ngdelta_2019</th>
-<th align="right">ngdelta_2020</th>
-<th align="right">ngdelta_2021</th>
-<th align="left">geometry</th>
-</tr>
-</thead>
-<tbody>
 <tr class="odd">
 <td align="left">GUJARAT</td>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
-<td align="right">3.490878</td>
-<td align="right">3.594737</td>
-<td align="right">3.108875</td>
-<td align="right">5.151268</td>
-<td align="right">5.047296</td>
-<td align="right">5.107276</td>
-<td align="right">4.329340</td>
-<td align="right">4.853487</td>
-<td align="right">2.975145</td>
-<td align="right">-13.515940</td>
-<td align="right">65.695604</td>
-<td align="right">-2.0183758</td>
-<td align="right">1.1883384</td>
-<td align="right">-15.231908</td>
-<td align="right">12.1068688</td>
-<td align="left">MULTIPOLYGON (((68.60902 23…</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">1990</td>
+<td align="right">62.465</td>
+<td align="left">1994</td>
+<td align="right">0.5101482</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
 </tr>
 <tr class="even">
-<td align="left">CHHATTISGARH</td>
-<td align="right">53</td>
-<td align="left">ABHANPUR</td>
-<td align="right">12.624266</td>
-<td align="right">13.570425</td>
-<td align="right">12.831418</td>
-<td align="right">13.463385</td>
-<td align="right">13.531258</td>
-<td align="right">14.782431</td>
-<td align="right">15.238846</td>
-<td align="right">16.155354</td>
-<td align="right">7.494768</td>
-<td align="right">-5.445717</td>
-<td align="right">4.925150</td>
-<td align="right">0.5041303</td>
-<td align="right">9.2465390</td>
-<td align="right">3.087552</td>
-<td align="right">6.0142857</td>
-<td align="left">MULTIPOLYGON (((82.01881 21…</td>
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">1990</td>
+<td align="right">62.465</td>
+<td align="left">1995</td>
+<td align="right">0.9146900</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
 </tr>
-<tr class="odd">
-<td align="left">ASSAM</td>
-<td align="right">34</td>
-<td align="left">ABHAYAPURI_NORTH</td>
-<td align="right">7.288409</td>
-<td align="right">7.931684</td>
-<td align="right">7.376339</td>
-<td align="right">8.425855</td>
-<td align="right">8.568838</td>
-<td align="right">8.934237</td>
-<td align="right">9.228242</td>
-<td align="right">9.918140</td>
-<td align="right">8.826004</td>
-<td align="right">-7.001609</td>
-<td align="right">14.228146</td>
-<td align="right">1.6969606</td>
-<td align="right">4.2642702</td>
-<td align="right">3.290772</td>
-<td align="right">7.4759472</td>
-<td align="left">MULTIPOLYGON (((90.61534 26…</td>
-</tr>
-<tr class="even">
-<td align="left">ASSAM</td>
-<td align="right">35</td>
-<td align="left">ABHAYAPURI_SOUTH</td>
-<td align="right">6.801065</td>
-<td align="right">7.443166</td>
-<td align="right">7.072894</td>
-<td align="right">8.313903</td>
-<td align="right">8.528848</td>
-<td align="right">8.505821</td>
-<td align="right">8.193196</td>
-<td align="right">8.960909</td>
-<td align="right">9.441187</td>
-<td align="right">-4.974659</td>
-<td align="right">17.545983</td>
-<td align="right">2.5853663</td>
-<td align="right">-0.2699833</td>
-<td align="right">-3.675423</td>
-<td align="right">9.3701233</td>
-<td align="left">MULTIPOLYGON (((90.52584 26…</td>
-</tr>
-<tr class="odd">
-<td align="left">PUNJAB</td>
-<td align="right">81</td>
-<td align="left">ABOHAR</td>
-<td align="right">7.800481</td>
-<td align="right">7.893507</td>
-<td align="right">7.537956</td>
-<td align="right">9.299423</td>
-<td align="right">9.457315</td>
-<td align="right">10.091180</td>
-<td align="right">9.872819</td>
-<td align="right">11.386056</td>
-<td align="right">1.192563</td>
-<td align="right">-4.504351</td>
-<td align="right">23.367973</td>
-<td align="right">1.6978712</td>
-<td align="right">6.7023714</td>
-<td align="right">-2.163879</td>
-<td align="right">15.3273043</td>
-<td align="left">MULTIPOLYGON (((73.95113 29…</td>
-</tr>
-<tr class="even">
-<td align="left">NAGALAND</td>
-<td align="right">47</td>
-<td align="left">ABOI</td>
-<td align="right">2.733590</td>
-<td align="right">4.112421</td>
-<td align="right">2.489784</td>
-<td align="right">5.690146</td>
-<td align="right">6.131438</td>
-<td align="right">6.386621</td>
-<td align="right">5.653170</td>
-<td align="right">5.668228</td>
-<td align="right">50.440281</td>
-<td align="right">-39.456989</td>
-<td align="right">128.539806</td>
-<td align="right">7.7553598</td>
-<td align="right">4.1618745</td>
-<td align="right">-11.484178</td>
-<td align="right">0.2663646</td>
-<td align="left">MULTIPOLYGON (((95.01074 26…</td>
-</tr>
-<tr class="odd">
-<td align="left">MAHARASHTRA</td>
-<td align="right">42</td>
-<td align="left">ACHALPUR</td>
-<td align="right">8.647731</td>
-<td align="right">9.113645</td>
-<td align="right">8.752775</td>
-<td align="right">10.189612</td>
-<td align="right">10.692202</td>
-<td align="right">12.304663</td>
-<td align="right">12.101831</td>
-<td align="right">13.393956</td>
-<td align="right">5.387700</td>
-<td align="right">-3.959661</td>
-<td align="right">16.415790</td>
-<td align="right">4.9323684</td>
-<td align="right">15.0807210</td>
-<td align="right">-1.648410</td>
-<td align="right">10.6771009</td>
-<td align="left">MULTIPOLYGON (((77.84772 21…</td>
-</tr>
-<tr class="even">
-<td align="left">ANDHRA_PRADESH</td>
-<td align="right">82</td>
-<td align="left">ACHAMPET</td>
-<td align="right">5.960447</td>
-<td align="right">6.512929</td>
-<td align="right">5.908168</td>
-<td align="right">6.194910</td>
-<td align="right">7.042454</td>
-<td align="right">7.451979</td>
-<td align="right">7.276866</td>
-<td align="right">8.172110</td>
-<td align="right">9.269131</td>
-<td align="right">-9.285548</td>
-<td align="right">4.853327</td>
-<td align="right">13.6812907</td>
-<td align="right">5.8150881</td>
-<td align="right">-2.349889</td>
-<td align="right">12.3025991</td>
-<td align="left">MULTIPOLYGON (((78.47749 16…</td>
-</tr>
-<tr class="odd">
-<td align="left">ANDHRA_PRADESH</td>
-<td align="right">175</td>
-<td align="left">ACHANTA</td>
-<td align="right">8.316714</td>
-<td align="right">9.165766</td>
-<td align="right">8.201967</td>
-<td align="right">9.554628</td>
-<td align="right">10.801366</td>
-<td align="right">12.599182</td>
-<td align="right">13.291595</td>
-<td align="right">14.289420</td>
-<td align="right">10.208977</td>
-<td align="right">-10.515199</td>
-<td align="right">16.491911</td>
-<td align="right">13.0485188</td>
-<td align="right">16.6443420</td>
-<td align="right">5.495693</td>
-<td align="right">7.5071928</td>
-<td align="left">MULTIPOLYGON (((81.74749 16…</td>
-</tr>
-<tr class="even">
-<td align="left">HARYANA</td>
-<td align="right">47</td>
-<td align="left">ADAMPUR</td>
-<td align="right">9.323948</td>
-<td align="right">9.018987</td>
-<td align="right">8.625794</td>
-<td align="right">9.770734</td>
-<td align="right">9.858004</td>
-<td align="right">10.975907</td>
-<td align="right">11.091228</td>
-<td align="right">12.047475</td>
-<td align="right">-3.270730</td>
-<td align="right">-4.359617</td>
-<td align="right">13.273450</td>
-<td align="right">0.8931753</td>
-<td align="right">11.3400619</td>
-<td align="right">1.050667</td>
-<td align="right">8.6216546</td>
-<td align="left">MULTIPOLYGON (((75.65801 29…</td>
-</tr>
-</tbody>
-</table>
-<pre class="r"><code>kable(nrow(nightlights))</code></pre>
-<table>
-<thead>
-<tr class="header">
-<th align="right">x</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="right">4074</td>
-</tr>
-</tbody>
-</table>
-<pre class="r"><code>kable(head(volatility, 10))</code></pre>
-<table>
-<colgroup>
-<col width="17%" />
-<col width="21%" />
-<col width="24%" />
-<col width="6%" />
-<col width="16%" />
-<col width="14%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">State_Name</th>
-<th align="right">Constituency_No</th>
-<th align="left">Constituency_Name</th>
-<th align="right">Year</th>
-<th align="right">Assembly_No</th>
-<th align="left">volatility</th>
-</tr>
-</thead>
-<tbody>
 <tr class="odd">
 <td align="left">GUJARAT</td>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
-<td align="right">2014</td>
-<td align="right">12</td>
-<td align="left">18.225</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">1990</td>
+<td align="right">62.465</td>
+<td align="left">1996</td>
+<td align="right">1.1065722</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
 </tr>
 <tr class="even">
-<td align="left">CHHATTISGARH</td>
-<td align="right">53</td>
-<td align="left">ABHANPUR</td>
-<td align="right">2013</td>
-<td align="right">3</td>
-<td align="left">10.445</td>
-</tr>
-<tr class="odd">
-<td align="left">ASSAM</td>
-<td align="right">34</td>
-<td align="left">ABHAYAPURI_NORTH</td>
-<td align="right">2011</td>
-<td align="right">13</td>
-<td align="left">27.795</td>
-</tr>
-<tr class="even">
-<td align="left">ASSAM</td>
-<td align="right">35</td>
-<td align="left">ABHAYAPURI_SOUTH</td>
-<td align="right">2011</td>
-<td align="right">13</td>
-<td align="left">49.555</td>
-</tr>
-<tr class="odd">
-<td align="left">NAGALAND</td>
-<td align="right">47</td>
-<td align="left">ABOI</td>
-<td align="right">2008</td>
-<td align="right">11</td>
-<td align="left">54.145</td>
-</tr>
-<tr class="even">
-<td align="left">NAGALAND</td>
-<td align="right">47</td>
-<td align="left">ABOI</td>
-<td align="right">2013</td>
-<td align="right">12</td>
-<td align="left">60.96</td>
-</tr>
-<tr class="odd">
-<td align="left">MAHARASHTRA</td>
-<td align="right">42</td>
-<td align="left">ACHALPUR</td>
-<td align="right">2014</td>
-<td align="right">12</td>
-<td align="left">44.615</td>
-</tr>
-<tr class="even">
-<td align="left">HARYANA</td>
-<td align="right">47</td>
-<td align="left">ADAMPUR</td>
-<td align="right">2014</td>
-<td align="right">12</td>
-<td align="left">68.335</td>
-</tr>
-<tr class="odd">
-<td align="left">HARYANA</td>
-<td align="right">79</td>
-<td align="left">ADAMPUR</td>
-<td align="right">2008</td>
-<td align="right">10</td>
-<td align="left">68.3</td>
-</tr>
-<tr class="even">
-<td align="left">DELHI</td>
-<td align="right">4</td>
-<td align="left">ADARSH_NAGAR</td>
-<td align="right">2013</td>
-<td align="right">9</td>
-<td align="left">29.025</td>
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">1990</td>
+<td align="right">62.465</td>
+<td align="left">1997</td>
+<td align="right">1.0811470</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>kable(nrow(volatility))</code></pre>
+<pre class="r"><code>kable(nrow(matched))</code></pre>
 <table>
 <thead>
 <tr class="header">
@@ -1402,76 +485,49 @@ kable(head(nightlights_old, 10))</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="right">2459</td>
+<td align="right">347952</td>
 </tr>
 </tbody>
 </table>
-<pre class="fuzzy"><code>kable(head(fuzzy_2013))
-kable(nrow(fuzzy_2013))</code></pre>
-<pre class="merge_old_data"><code>sf_use_s2(FALSE)
-old_data &lt;- inner_join(nightlights_old, volatility, by = c(&quot;state&quot; = &quot;State_Name&quot;, &quot;ac_name&quot; = &quot;Constituency_Name&quot;))
-# temp &lt;- inner_join(nightlights, fuzzy_2013, by = c(&quot;state&quot; = &quot;state&quot;, &quot;ac_name&quot; = &quot;ac_name&quot;))
-# temp &lt;- inner_join(temp, volatility, by = c(&quot;state&quot; = &quot;State_Name&quot;, &quot;matched_name&quot; = &quot;Constituency_Name&quot;))
-kable(head(old_data))
-kable(nrow(old_data))</code></pre>
-<pre class="write_old_data"><code>old_data &lt;- old_data%&gt;%
-  mutate(volatility = as.numeric(volatility))
-st_write(old_data, &quot;./data/matched_dataset_2010_1.shp&quot;, delete_dsn = T)</code></pre>
-<pre class="r"><code>sf_use_s2(FALSE)
-new_data &lt;- inner_join(nightlights, volatility, by = c(&quot;state&quot; = &quot;State_Name&quot;, &quot;ac_name&quot; = &quot;Constituency_Name&quot;))
-# temp &lt;- inner_join(nightlights, fuzzy_2013, by = c(&quot;state&quot; = &quot;state&quot;, &quot;ac_name&quot; = &quot;ac_name&quot;))
-# temp &lt;- inner_join(temp, volatility, by = c(&quot;state&quot; = &quot;State_Name&quot;, &quot;matched_name&quot; = &quot;Constituency_Name&quot;))
-kable(head(new_data))</code></pre>
-<table style="width:100%;">
+<pre class="r"><code>matched_new &lt;- rbind(matched_2010_2, matched_2015)
+matched_new &lt;- rbind(matched_new, matched_2020)
+
+matched_new &lt;- matched_new%&gt;%
+  pivot_longer(cols = starts_with(&quot;ng_&quot;),
+                          names_to = &quot;nightlight_year&quot;,
+                          values_to = &quot;nightlights&quot;)%&gt;%
+  mutate(election_year = Year)%&gt;%
+  mutate(volatility = voltlty)%&gt;%
+  mutate(delta_year = gsub(&quot;ng_&quot;, &quot;&quot;, nightlight_year))%&gt;%
+  arrange(ac_name)
+
+matched_new &lt;- matched_new[, c(&quot;state&quot;, &quot;ac_no&quot;, &quot;ac_name&quot;, &quot;Cnstt_N&quot;, &quot;Assmb_N&quot;, &quot;election_year&quot;, &quot;volatility&quot;, &quot;delta_year&quot;, &quot;nightlights&quot;, &quot;geometry&quot;)]
+
+kable(head(matched_new))</code></pre>
+<table>
 <colgroup>
-<col width="4%" />
-<col width="2%" />
 <col width="6%" />
-<col width="3%" />
-<col width="3%" />
-<col width="3%" />
-<col width="3%" />
-<col width="3%" />
-<col width="3%" />
-<col width="3%" />
-<col width="3%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
-<col width="4%" />
 <col width="5%" />
-<col width="1%" />
-<col width="4%" />
-<col width="3%" />
+<col width="6%" />
+<col width="6%" />
+<col width="6%" />
+<col width="11%" />
+<col width="9%" />
+<col width="9%" />
 <col width="10%" />
+<col width="26%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">state</th>
 <th align="right">ac_no</th>
 <th align="left">ac_name</th>
-<th align="right">ng_2014</th>
-<th align="right">ng_2015</th>
-<th align="right">ng_2016</th>
-<th align="right">ng_2017</th>
-<th align="right">ng_2018</th>
-<th align="right">ng_2019</th>
-<th align="right">ng_2020</th>
-<th align="right">ng_2021</th>
-<th align="right">ngdelta_2015</th>
-<th align="right">ngdelta_2016</th>
-<th align="right">ngdelta_2017</th>
-<th align="right">ngdelta_2018</th>
-<th align="right">ngdelta_2019</th>
-<th align="right">ngdelta_2020</th>
-<th align="right">ngdelta_2021</th>
-<th align="right">Constituency_No</th>
-<th align="right">Year</th>
-<th align="right">Assembly_No</th>
-<th align="left">volatility</th>
+<th align="right">Cnstt_N</th>
+<th align="right">Assmb_N</th>
+<th align="right">election_year</th>
+<th align="right">volatility</th>
+<th align="left">delta_year</th>
+<th align="right">nightlights</th>
 <th align="left">geometry</th>
 </tr>
 </thead>
@@ -1480,155 +536,77 @@ kable(head(new_data))</code></pre>
 <td align="left">GUJARAT</td>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
-<td align="right">3.490878</td>
-<td align="right">3.594737</td>
-<td align="right">3.108875</td>
-<td align="right">5.151268</td>
-<td align="right">5.047296</td>
-<td align="right">5.107276</td>
-<td align="right">4.329340</td>
-<td align="right">4.853487</td>
-<td align="right">2.975145</td>
-<td align="right">-13.515940</td>
-<td align="right">65.69560</td>
-<td align="right">-2.0183758</td>
-<td align="right">1.1883384</td>
-<td align="right">-15.231908</td>
-<td align="right">12.1068688</td>
 <td align="right">1</td>
-<td align="right">2014</td>
 <td align="right">12</td>
-<td align="left">18.225</td>
+<td align="right">2014</td>
+<td align="right">18.225</td>
+<td align="left">2014</td>
+<td align="right">3.490878</td>
 <td align="left">MULTIPOLYGON (((68.60902 23…</td>
 </tr>
 <tr class="even">
-<td align="left">CHHATTISGARH</td>
-<td align="right">53</td>
-<td align="left">ABHANPUR</td>
-<td align="right">12.624266</td>
-<td align="right">13.570425</td>
-<td align="right">12.831418</td>
-<td align="right">13.463385</td>
-<td align="right">13.531258</td>
-<td align="right">14.782431</td>
-<td align="right">15.238846</td>
-<td align="right">16.155354</td>
-<td align="right">7.494768</td>
-<td align="right">-5.445717</td>
-<td align="right">4.92515</td>
-<td align="right">0.5041303</td>
-<td align="right">9.2465390</td>
-<td align="right">3.087552</td>
-<td align="right">6.0142857</td>
-<td align="right">53</td>
-<td align="right">2013</td>
-<td align="right">3</td>
-<td align="left">10.445</td>
-<td align="left">MULTIPOLYGON (((82.01881 21…</td>
-</tr>
-<tr class="odd">
-<td align="left">ASSAM</td>
-<td align="right">34</td>
-<td align="left">ABHAYAPURI_NORTH</td>
-<td align="right">7.288409</td>
-<td align="right">7.931684</td>
-<td align="right">7.376339</td>
-<td align="right">8.425855</td>
-<td align="right">8.568838</td>
-<td align="right">8.934237</td>
-<td align="right">9.228242</td>
-<td align="right">9.918140</td>
-<td align="right">8.826004</td>
-<td align="right">-7.001609</td>
-<td align="right">14.22815</td>
-<td align="right">1.6969606</td>
-<td align="right">4.2642702</td>
-<td align="right">3.290772</td>
-<td align="right">7.4759472</td>
-<td align="right">34</td>
-<td align="right">2011</td>
-<td align="right">13</td>
-<td align="left">27.795</td>
-<td align="left">MULTIPOLYGON (((90.61534 26…</td>
-</tr>
-<tr class="even">
-<td align="left">ASSAM</td>
-<td align="right">35</td>
-<td align="left">ABHAYAPURI_SOUTH</td>
-<td align="right">6.801065</td>
-<td align="right">7.443166</td>
-<td align="right">7.072894</td>
-<td align="right">8.313903</td>
-<td align="right">8.528848</td>
-<td align="right">8.505821</td>
-<td align="right">8.193196</td>
-<td align="right">8.960909</td>
-<td align="right">9.441187</td>
-<td align="right">-4.974659</td>
-<td align="right">17.54598</td>
-<td align="right">2.5853663</td>
-<td align="right">-0.2699833</td>
-<td align="right">-3.675423</td>
-<td align="right">9.3701233</td>
-<td align="right">35</td>
-<td align="right">2011</td>
-<td align="right">13</td>
-<td align="left">49.555</td>
-<td align="left">MULTIPOLYGON (((90.52584 26…</td>
-</tr>
-<tr class="odd">
-<td align="left">NAGALAND</td>
-<td align="right">47</td>
-<td align="left">ABOI</td>
-<td align="right">2.733590</td>
-<td align="right">4.112421</td>
-<td align="right">2.489784</td>
-<td align="right">5.690146</td>
-<td align="right">6.131438</td>
-<td align="right">6.386621</td>
-<td align="right">5.653170</td>
-<td align="right">5.668228</td>
-<td align="right">50.440281</td>
-<td align="right">-39.456989</td>
-<td align="right">128.53981</td>
-<td align="right">7.7553598</td>
-<td align="right">4.1618745</td>
-<td align="right">-11.484178</td>
-<td align="right">0.2663646</td>
-<td align="right">47</td>
-<td align="right">2008</td>
-<td align="right">11</td>
-<td align="left">54.145</td>
-<td align="left">MULTIPOLYGON (((95.01074 26…</td>
-</tr>
-<tr class="even">
-<td align="left">NAGALAND</td>
-<td align="right">47</td>
-<td align="left">ABOI</td>
-<td align="right">2.733590</td>
-<td align="right">4.112421</td>
-<td align="right">2.489784</td>
-<td align="right">5.690146</td>
-<td align="right">6.131438</td>
-<td align="right">6.386621</td>
-<td align="right">5.653170</td>
-<td align="right">5.668228</td>
-<td align="right">50.440281</td>
-<td align="right">-39.456989</td>
-<td align="right">128.53981</td>
-<td align="right">7.7553598</td>
-<td align="right">4.1618745</td>
-<td align="right">-11.484178</td>
-<td align="right">0.2663646</td>
-<td align="right">47</td>
-<td align="right">2013</td>
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
 <td align="right">12</td>
-<td align="left">60.96</td>
-<td align="left">MULTIPOLYGON (((95.01074 26…</td>
+<td align="right">2014</td>
+<td align="right">18.225</td>
+<td align="left">2015</td>
+<td align="right">3.594737</td>
+<td align="left">MULTIPOLYGON (((68.60902 23…</td>
+</tr>
+<tr class="odd">
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">12</td>
+<td align="right">2014</td>
+<td align="right">18.225</td>
+<td align="left">2016</td>
+<td align="right">3.108875</td>
+<td align="left">MULTIPOLYGON (((68.60902 23…</td>
+</tr>
+<tr class="even">
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">12</td>
+<td align="right">2014</td>
+<td align="right">18.225</td>
+<td align="left">2017</td>
+<td align="right">5.151268</td>
+<td align="left">MULTIPOLYGON (((68.60902 23…</td>
+</tr>
+<tr class="odd">
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">12</td>
+<td align="right">2014</td>
+<td align="right">18.225</td>
+<td align="left">2018</td>
+<td align="right">5.047296</td>
+<td align="left">MULTIPOLYGON (((68.60902 23…</td>
+</tr>
+<tr class="even">
+<td align="left">GUJARAT</td>
+<td align="right">1</td>
+<td align="left">ABDASA</td>
+<td align="right">1</td>
+<td align="right">12</td>
+<td align="right">2014</td>
+<td align="right">18.225</td>
+<td align="left">2019</td>
+<td align="right">5.107276</td>
+<td align="left">MULTIPOLYGON (((68.60902 23…</td>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>kable(nrow(new_data))</code></pre>
+<pre class="r"><code>kable(nrow(matched_new))</code></pre>
 <table>
 <thead>
 <tr class="header">
@@ -1637,17 +615,21 @@ kable(head(new_data))</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="right">2278</td>
+<td align="right">66320</td>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>new_data &lt;- new_data%&gt;%
-  mutate(volatility = as.numeric(volatility))
-st_write(new_data, &quot;./data/matched_dataset_2010_2.shp&quot;, delete_dsn = T)</code></pre>
-<pre><code>## Deleting source `./data/matched_dataset_2010_2.shp&#39; failed
-## Writing layer `matched_dataset_2010_2&#39; to data source 
-##   `./data/matched_dataset_2010_2.shp&#39; using driver `ESRI Shapefile&#39;
-## Writing 2278 features with 22 fields and geometry type Multi Polygon.</code></pre>
+<pre class="append_total"><code>matched_data &lt;- rbind(matched, matched_new)
+matched_data &lt;- matched_data%&gt;%
+  distinct(state, ac_no, ac_name, election_year, delta_year, .keep_all = TRUE)
+
+kable(head(matched_data))
+kable(nrow(matched_data))</code></pre>
+<pre class="r"><code>st_write(matched_new, &quot;./data/matched_dataset_new.shp&quot;, delete_dsn = T)</code></pre>
+<pre><code>## Deleting source `./data/matched_dataset_new.shp&#39; failed
+## Writing layer `matched_dataset_new&#39; to data source 
+##   `./data/matched_dataset_new.shp&#39; using driver `ESRI Shapefile&#39;
+## Writing 66320 features with 9 fields and geometry type Multi Polygon.</code></pre>
 
 
 
