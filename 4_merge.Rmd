@@ -12,6 +12,7 @@ library(kableExtra)
 library(tidyr)
 library(dplyr)
 library(stringr)
+sf_use_s2(FALSE)
 ```
 
 ```{r data, include=FALSE}
@@ -96,7 +97,6 @@ kable(nrow(fuzzy_2013))
 ```
 
 ``` {merge_old_data}
-sf_use_s2(FALSE)
 old_data <- inner_join(nightlights_old, volatility, by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))
 # temp <- inner_join(nightlights, fuzzy_2013, by = c("state" = "state", "ac_name" = "ac_name"))
 # temp <- inner_join(temp, volatility, by = c("state" = "State_Name", "matched_name" = "Constituency_Name"))

@@ -177,29 +177,42 @@ Conditions &amp; Electoral Volatility</h1>
 <span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  <span class="fu">ungroup</span>()<span class="sc">%&gt;%</span></span>
 <span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">adjusted_nightlights =</span> ((nightlights <span class="sc">-</span> mean_nightlights)<span class="sc">/</span>mean_nightlights) <span class="sc">*</span> <span class="dv">100</span>)<span class="sc">%&gt;%</span></span>
 <span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>  <span class="fu">group_by</span>(state, ac_name)<span class="sc">%&gt;%</span></span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">absolute_change =</span> nightlights <span class="sc">-</span> <span class="fu">lag</span>(nightlights, <span class="at">n=</span><span class="dv">4</span>))<span class="sc">%&gt;%</span></span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">relative_change =</span> ((nightlights <span class="sc">-</span> <span class="fu">lag</span>(nightlights, <span class="at">n=</span><span class="dv">4</span>))<span class="sc">/</span><span class="fu">lag</span>(nightlights, <span class="at">n=</span><span class="dv">4</span>)) <span class="sc">*</span> <span class="dv">100</span>)<span class="sc">%&gt;%</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">absolute_change =</span> nightlights <span class="sc">-</span> <span class="fu">lag</span>(nightlights, <span class="at">n=</span><span class="dv">1</span>))<span class="sc">%&gt;%</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">relative_change =</span> ((nightlights <span class="sc">-</span> <span class="fu">lag</span>(nightlights, <span class="at">n=</span><span class="dv">1</span>))<span class="sc">/</span><span class="fu">lag</span>(nightlights, <span class="at">n=</span><span class="dv">1</span>)) <span class="sc">*</span> <span class="dv">100</span>)<span class="sc">%&gt;%</span></span>
 <span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">absolute_adj_change =</span> adjusted_nightlights <span class="sc">-</span> <span class="fu">lag</span>(adjusted_nightlights, <span class="at">n=</span><span class="dv">4</span>))<span class="sc">%&gt;%</span></span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">relative_adj_change =</span> ((adjusted_nightlights <span class="sc">-</span> <span class="fu">lag</span>(adjusted_nightlights, <span class="at">n=</span><span class="dv">4</span>))<span class="sc">/</span><span class="fu">lag</span>(adjusted_nightlights, <span class="at">n=</span><span class="dv">4</span>)) <span class="sc">*</span> <span class="dv">100</span>)<span class="sc">%&gt;%</span></span>
-<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code></pre></div>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">relative_adj_change =</span> ((adjusted_nightlights <span class="sc">-</span> <span class="fu">lag</span>(adjusted_nightlights, <span class="at">n=</span><span class="dv">1</span>))<span class="sc">/</span><span class="fu">lag</span>(adjusted_nightlights, <span class="at">n=</span><span class="dv">1</span>)) <span class="sc">*</span> <span class="dv">100</span>)<span class="sc">%&gt;%</span></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>  <span class="fu">ungroup</span>()<span class="sc">%&gt;%</span></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a>  <span class="fu">group_by</span>(state, ac_name, election_year)<span class="sc">%&gt;%</span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">past_three =</span> <span class="fu">rollmean</span>(nightlights, <span class="at">k =</span> <span class="dv">3</span>, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">align =</span> <span class="st">&quot;right&quot;</span>))<span class="sc">%&gt;%</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">absolute_change_p3 =</span> past_three <span class="sc">-</span> <span class="fu">lag</span>(past_three))<span class="sc">%&gt;%</span></span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">relative_change_p3 =</span> ((past_three <span class="sc">-</span> <span class="fu">lag</span>(past_three))<span class="sc">/</span><span class="fu">lag</span>(past_three)) <span class="sc">*</span> <span class="dv">100</span>)<span class="sc">%&gt;%</span></span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a>data <span class="ot">&lt;-</span> data<span class="sc">%&gt;%</span></span>
+<span id="cb1-26"><a href="#cb1-26" tabindex="-1"></a>  <span class="fu">filter</span>((election_year<span class="dv">-1</span>) <span class="sc">==</span> delta_year)<span class="sc">%&gt;%</span></span>
+<span id="cb1-27"><a href="#cb1-27" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(relative_change))<span class="sc">%&gt;%</span></span>
+<span id="cb1-28"><a href="#cb1-28" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">is.finite</span>(relative_change))</span></code></pre></div>
 <table>
 <colgroup>
-<col width="3%" />
+<col width="4%" />
 <col width="2%" />
 <col width="3%" />
+<col width="2%" />
+<col width="2%" />
+<col width="4%" />
 <col width="3%" />
+<col width="3%" />
+<col width="4%" />
+<col width="10%" />
+<col width="6%" />
+<col width="7%" />
+<col width="5%" />
+<col width="5%" />
+<col width="7%" />
+<col width="7%" />
 <col width="3%" />
 <col width="6%" />
-<col width="4%" />
-<col width="4%" />
-<col width="5%" />
-<col width="13%" />
-<col width="7%" />
-<col width="9%" />
-<col width="7%" />
-<col width="7%" />
-<col width="8%" />
-<col width="8%" />
+<col width="6%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -219,6 +232,9 @@ Conditions &amp; Electoral Volatility</h1>
 <th align="right">relative_change</th>
 <th align="right">absolute_adj_change</th>
 <th align="right">relative_adj_change</th>
+<th align="right">past_three</th>
+<th align="right">absolute_change_p3</th>
+<th align="right">relative_change_p3</th>
 </tr>
 </thead>
 <tbody>
@@ -227,16 +243,19 @@ Conditions &amp; Electoral Volatility</h1>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
 <td align="right">1</td>
-<td align="right">13</td>
-<td align="right">2020</td>
-<td align="right">26.255</td>
-<td align="left">2014</td>
-<td align="right">3.490878</td>
-<td align="left">MULTIPOLYGON (((68.60902 23…</td>
-<td align="right">16.65281</td>
-<td align="right">-79.03730</td>
+<td align="right">8</td>
+<td align="right">1995</td>
+<td align="right">17.090</td>
+<td align="left">1994</td>
+<td align="right">0.5101482</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
+<td align="right">6.381777</td>
+<td align="right">-92.006172</td>
+<td align="right">-0.0492419</td>
+<td align="right">-8.802783</td>
 <td align="right">NA</td>
-<td align="right">NA</td>
+<td align="right">0.7153094</td>
+<td align="right">0.4732202</td>
 <td align="right">NA</td>
 <td align="right">NA</td>
 </tr>
@@ -245,90 +264,105 @@ Conditions &amp; Electoral Volatility</h1>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
 <td align="right">1</td>
-<td align="right">13</td>
-<td align="right">2020</td>
-<td align="right">26.255</td>
-<td align="left">2015</td>
-<td align="right">3.594737</td>
-<td align="left">MULTIPOLYGON (((68.60902 23…</td>
-<td align="right">16.80743</td>
-<td align="right">-78.61222</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
+<td align="right">9</td>
+<td align="right">1998</td>
+<td align="right">7.915</td>
+<td align="left">1997</td>
+<td align="right">1.0811470</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
+<td align="right">7.363795</td>
+<td align="right">-85.318074</td>
+<td align="right">-0.0254252</td>
+<td align="right">-2.297654</td>
+<td align="right">6.0346438</td>
+<td align="right">0.0770206</td>
+<td align="right">1.0341364</td>
+<td align="right">0.1903329</td>
+<td align="right">22.556545</td>
 </tr>
 <tr class="odd">
 <td align="left">GUJARAT</td>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
 <td align="right">1</td>
-<td align="right">13</td>
-<td align="right">2020</td>
-<td align="right">26.255</td>
-<td align="left">2016</td>
-<td align="right">3.108875</td>
-<td align="left">MULTIPOLYGON (((68.60902 23…</td>
-<td align="right">16.43311</td>
-<td align="right">-81.08164</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
+<td align="right">10</td>
+<td align="right">2002</td>
+<td align="right">10.910</td>
+<td align="left">2001</td>
+<td align="right">1.2505221</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
+<td align="right">8.260908</td>
+<td align="right">-84.862172</td>
+<td align="right">0.1380696</td>
+<td align="right">12.411283</td>
+<td align="right">0.4559021</td>
+<td align="right">-2.3902378</td>
+<td align="right">1.1553600</td>
+<td align="right">0.0320968</td>
+<td align="right">2.857462</td>
 </tr>
 <tr class="even">
 <td align="left">GUJARAT</td>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
 <td align="right">1</td>
-<td align="right">13</td>
-<td align="right">2020</td>
-<td align="right">26.255</td>
-<td align="left">2017</td>
-<td align="right">5.151268</td>
-<td align="left">MULTIPOLYGON (((68.60902 23…</td>
-<td align="right">17.90585</td>
-<td align="right">-71.23137</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
-<td align="right">NA</td>
+<td align="right">11</td>
+<td align="right">2007</td>
+<td align="right">18.450</td>
+<td align="left">2006</td>
+<td align="right">1.5098283</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
+<td align="right">6.845640</td>
+<td align="right">-77.944673</td>
+<td align="right">-0.4624319</td>
+<td align="right">-23.446800</td>
+<td align="right">4.6570510</td>
+<td align="right">2.2188125</td>
+<td align="right">1.6533608</td>
+<td align="right">0.0544112</td>
+<td align="right">3.402935</td>
 </tr>
 <tr class="odd">
 <td align="left">GUJARAT</td>
 <td align="right">1</td>
 <td align="left">ABDASA</td>
 <td align="right">1</td>
-<td align="right">13</td>
-<td align="right">2020</td>
-<td align="right">26.255</td>
-<td align="left">2018</td>
-<td align="right">5.047296</td>
-<td align="left">MULTIPOLYGON (((68.60902 23…</td>
-<td align="right">18.86253</td>
-<td align="right">-73.24168</td>
-<td align="right">1.556418</td>
-<td align="right">44.58529</td>
-<td align="right">5.795616</td>
-<td align="right">-7.332761</td>
+<td align="right">12</td>
+<td align="right">2014</td>
+<td align="right">18.225</td>
+<td align="left">2013</td>
+<td align="right">1.8459059</td>
+<td align="left">MULTIPOLYGON (((68.76136 23…</td>
+<td align="right">8.718386</td>
+<td align="right">-78.827434</td>
+<td align="right">-0.5638231</td>
+<td align="right">-23.397780</td>
+<td align="right">-3.7442610</td>
+<td align="right">6.7394261</td>
+<td align="right">2.1339981</td>
+<td align="right">-0.1420185</td>
+<td align="right">-6.239784</td>
 </tr>
 <tr class="even">
-<td align="left">GUJARAT</td>
-<td align="right">1</td>
-<td align="left">ABDASA</td>
-<td align="right">1</td>
-<td align="right">13</td>
-<td align="right">2020</td>
-<td align="right">26.255</td>
-<td align="left">2019</td>
-<td align="right">5.107276</td>
-<td align="left">MULTIPOLYGON (((68.60902 23…</td>
-<td align="right">20.63047</td>
-<td align="right">-75.24401</td>
-<td align="right">1.512538</td>
-<td align="right">42.07647</td>
-<td align="right">3.368205</td>
-<td align="right">-4.284582</td>
+<td align="left">CHHATTISGARH</td>
+<td align="right">42</td>
+<td align="left">ABHANPUR</td>
+<td align="right">53</td>
+<td align="right">3</td>
+<td align="right">2013</td>
+<td align="right">10.445</td>
+<td align="left">2012</td>
+<td align="right">10.1036711</td>
+<td align="left">MULTIPOLYGON (((82.01436 21…</td>
+<td align="right">9.215146</td>
+<td align="right">9.642002</td>
+<td align="right">0.6222925</td>
+<td align="right">6.563313</td>
+<td align="right">-6.5838914</td>
+<td align="right">-17.2397405</td>
+<td align="right">9.5002076</td>
+<td align="right">0.1136999</td>
+<td align="right">1.211312</td>
 </tr>
 </tbody>
 </table>
@@ -340,15 +374,15 @@ Conditions &amp; Electoral Volatility</h1>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="right">29826</td>
+<td align="right">11648</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">st_write</span>(data, <span class="st">&quot;./data/processed_dataset_new.shp&quot;</span>, <span class="at">delete_dsn =</span> T)</span></code></pre></div>
-<pre><code>## Deleting source `./data/processed_dataset_new.shp&#39; failed
-## Writing layer `processed_dataset_new&#39; to data source 
-##   `./data/processed_dataset_new.shp&#39; using driver `ESRI Shapefile&#39;
-## Writing 29826 features with 15 fields and geometry type Multi Polygon.</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">st_write</span>(data, <span class="st">&quot;./data/processed_dataset_old.shp&quot;</span>, <span class="at">delete_dsn =</span> T)</span></code></pre></div>
+<pre><code>## Deleting source `./data/processed_dataset_old.shp&#39; using driver `ESRI Shapefile&#39;
+## Writing layer `processed_dataset_old&#39; to data source 
+##   `./data/processed_dataset_old.shp&#39; using driver `ESRI Shapefile&#39;
+## Writing 11648 features with 18 fields and geometry type Multi Polygon.</code></pre>
     </section>
   </div>
 </div>
