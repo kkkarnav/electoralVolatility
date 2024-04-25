@@ -1,0 +1,483 @@
+---
+title: "Where Does The Buck Stop? Economic Conditions & Electoral Volatility"
+author: "Karnav Popat & Shashwat Agarwal"
+date: "21/03/2024"
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: vignette
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(kableExtra)
+library(sf)
+library(raster)
+library(exactextractr)
+library(fuzzyjoin)
+library(zoo)
+library(plm)
+library(stargazer)
+sf_use_s2(FALSE)
+```
+
+```{r data, include=FALSE}
+assembly <- read.csv("../TCPD/All_States_AE.csv")
+
+assembly_shp <- st_read("../shp/india_assemblies.shp")
+assembly_shp_old <- st_read("../shp/AC_All_Final.shp")
+```
+
+## Research Question
+
+We know that voters punish incumbents when the economy goes sour. At what level of governance do voters allocate responsibility for economic underperformance? Any voter in India is under atleast three levels of governance: local representation, state government, and central government. In the United States, where popular perception of control is focused on the President, voters tend to punish the President's party. Does this hold true for India, where economic initiative is (or was) significantly more decentralized?
+
+## Dependent Variable
+
+To measure how voters reward and punish retrospective economic conditions, we use electoral volatility. We can calculate this for each constituency and each election using TCPD's election datasets.
+
+```{r tcpd, include=FALSE}
+kable(head(assembly), caption="Assembly Elections Dataset")
+assembly <- assembly%>%
+  filter(State_Name == "West_Bengal")
+```
+
+Some of the indicators used in Dash & Ferris are calculated at the constituency level, rather than being specific to candidate or party. These are the voter turnout (which indicates the level of democratic participation) and Effective Number of Parties (ENOP, which indicates the effective degree of choice that the voter has).
+
+```{r vote_stats}
+aggregate_electoral_indicators <- assembly %>%
+  group_by(State_Name, Year, Constituency_Name)%>%
+  summarize(total_votes=sum(Votes), Electors=first(Electors), Turnout_Percentage=first(Turnout_Percentage), ENOP=first(ENOP))
+```
+
+```{r vote_stats_table, echo=FALSE}
+kable(head(aggregate_electoral_indicators), caption="Aggregate Electoral Indicators") %>%
+  kable_styling(font_size=12)
+kable(nrow(aggregate_electoral_indicators))%>%
+  kable_styling(font_size=12)
+```
+
+More comprehensive measures of voting behaviour are calculated from one election to another. Electoral Volatility is expressed as:
+$$
+\frac{\sum_{p=1}^{n}V_{pt} - V_{p(t-1)}}{2}
+$$
+for each party _p_ between election _t_ and _t-1_. To calculate this, we first widen the dataset to get each party's voteshare in each election.
+
+``` {r partywise}
+# Aggregate the dataframe by party instead of by candidate
+partywise_votes <- assembly %>%
+  filter(last_poll == TRUE)%>%
+  mutate(is_winner = ifelse(Position == 1, 1, 0))%>%
+  group_by(State_Name, Constituency_No, Constituency_Name, Year, Assembly_No, Party)%>%
+  summarize(Votes=sum(Votes), Valid_Votes=sum(Valid_Votes), Electors=first(Electors), Turnout=first(Turnout_Percentage), Constituency_Type=first(Constituency_Type), Vote_Share_Percentage=sum(Vote_Share_Percentage), ENOP=first(ENOP), is_winner=first(is_winner))%>%
+  ungroup()%>%
+  
+  group_by(State_Name, Assembly_No, Party)%>%
+  mutate(seats=sum(is_winner))%>%
+  ungroup()%>%
+  
+  group_by(State_Name, Assembly_No)%>%
+  mutate(state_winner = ifelse(seats == max(seats), 1, 0))%>%
+  ungroup()%>%
+
+  group_by(State_Name, Constituency_No, Constituency_Name, Party)%>%
+  mutate(is_incumbent = lag(is_winner, n=1))%>%
+  mutate(is_incumbent = replace_na(is_incumbent, 0))%>%
+  mutate(state_incumbent = lag(state_winner, n=1))%>%
+  mutate(state_incumbent = replace_na(state_incumbent, 0))%>%
+  ungroup()
+```
+
+``` {r pivot}
+# Extract the list of parties
+party_list <- as.list(unique(partywise_votes$Party))
+
+
+partywise_votes["Winning_Party"] <- ifelse(partywise_votes$is_winner == 1, partywise_votes$Vote_Share_Percentage, 0)
+partywise_votes["State_Win_Party"] <- ifelse(partywise_votes$state_winner == 1, partywise_votes$Vote_Share_Percentage, 0)
+partywise_votes["Incumbent_Party"] <- ifelse(partywise_votes$is_incumbent == 1, partywise_votes$Vote_Share_Percentage, 0)
+partywise_votes["State_Incumb_Party"] <- ifelse(partywise_votes$state_incumbent == 1, partywise_votes$Vote_Share_Percentage, 0)
+
+# Widen the dataframe for each party
+for (party in party_list) {
+  partywise_votes[[paste0("Party_", party)]] <- ifelse(partywise_votes$Party == party, partywise_votes$Vote_Share_Percentage, 0)
+}
+
+partywise_votes <- partywise_votes%>%
+  dplyr::select(-Party, -Votes, -Valid_Votes, -seats)%>%
+  group_by(State_Name, Constituency_No, Constituency_Name, Assembly_No, Year, Electors, Turnout, Constituency_Type, ENOP)%>%
+  summarise_all(.funs = function(x) sum(x))%>%
+  ungroup()
+
+```
+
+```{r partywise_votes_table, echo=FALSE}
+kable(head(partywise_votes, 10), caption="Party-wise Vote Shares in Assembly Elections")%>%
+  kable_styling(font_size=12)
+kable(nrow(partywise_votes))%>%
+  kable_styling(font_size=12)
+# write.csv(partywise_votes, "./data/partywise_voteshare_constituency.csv", row.names=FALSE)
+```
+
+``` {r volatility}
+# Calculate the volatility by summing the deltas for each party
+partywise_deltas <- partywise_votes%>%
+  group_by(State_Name, Constituency_No, Constituency_Name)%>%
+  mutate_at(vars(starts_with("Party_")), 
+            funs(abs(. - lag(.))))%>%
+  mutate_all(~replace(., is.na(.), 0))%>%
+  mutate_at(vars(matches("^Party")), as.numeric)%>%
+  mutate(incumb_change = Incumbent_Party - lag(Winning_Party))%>%
+  mutate(incumb_change = replace_na(incumb_change, 0))%>%
+  mutate(state_incumb_change = State_Incumb_Party - lag(State_Win_Party))%>%
+  mutate(state_incumb_change = replace_na(state_incumb_change, 0))%>%
+  ungroup()%>%
+  mutate(volatility=rowSums(dplyr::select(., starts_with("Party_")))/2)
+
+volatility <- partywise_deltas%>%
+  dplyr::select(State_Name, Constituency_No, Constituency_Name, Year, Assembly_No, Electors, Turnout, ENOP, volatility, incumb_change, state_incumb_change)
+```
+
+``` {r volatility_table, echo=FALSE}
+kable(head(volatility, 10), caption="Volatility in Assembly Elections")%>%
+  kable_styling(font_size=12)
+kable(nrow(volatility))%>%
+  kable_styling(font_size=12)
+# write.csv(partywise_deltas, "./data/partywise_deltas_constituency.csv", row.names=FALSE)
+# write.csv(volatility, "./data/volatility_constituency.csv", row.names=FALSE)
+```
+
+``` {read}
+volatility <- read.csv("./data/volatility_constituency.csv")
+```
+
+This gives us our dependent variable, electoral volatility, at the constituency level.
+
+``` {r boxplot_state, echo=FALSE}
+# calculates the median value for each state
+state_table <- volatility %>%
+  group_by(State_Name)%>%
+  summarise(median_vol=median(volatility), na.rm=TRUE)%>%
+  arrange(median_vol)
+
+volatility["State_Name"] <- factor(volatility$State_Name, levels = state_table$State_Name)
+
+ggplot(volatility, aes(x = factor(State_Name), y = volatility)) +
+  geom_boxplot() +
+  labs(title = "Volatility by State") +
+  xlab("State/UT") +
+  ylab("% Volatiliy") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+``` {r boxplot_year, echo=FALSE}
+ggplot(volatility, aes(x = factor(Year), y = volatility)) +
+  geom_boxplot() +
+  labs(title = "Volatility by Election") +
+  xlab("Year") +
+  ylab("% Volatiliy") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+``` {r line_year, echo=FALSE}
+
+sum_volatility <- volatility %>%
+  group_by(Year) %>%
+  summarise(mean_volatility = mean(volatility), incumb_change = mean(incumb_change), state_incumb_change = mean(state_incumb_change), across())
+
+ggplot(sum_volatility, aes(x = Year, y = mean_volatility)) +
+  geom_line() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") + 
+  labs(title = "Volatility by Election") +
+  xlab("Year") +
+  ylab("% Volatiliy") +
+  theme(axis.text.x = element_text(angle = 45)) +
+  ylim(0, 100)
+```
+
+To test our hypothesis, we'd want to narrow this down by calculating electoral volatility separately for the local incumbent party, the ruling state party, and the ruling central party.
+
+``` {r change_line_year, echo=FALSE}
+ggplot(sum_volatility, aes(x = Year)) +
+  geom_line(aes(y = incumb_change, colour = "incumb_change")) + 
+  geom_line(aes(y = state_incumb_change, colour = "state_incumb_change")) +
+  labs(title = "Incumbents by Election") +
+  xlab("Year") +
+  ylab("Incumbent Voteshare Change") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+## Independent Variable
+
+To measure nationwide economic conditions over time, we use night-lights data as a proxy. This is a well-established though inherently limited practice. We can get night-lights data from SHRUG, which is divided on either side of 2013 into two different satellites' data. We therefore use the Li harmonized nightlights dataset.
+
+``` {r shapefile}
+ext <- extent(assembly_shp)
+ext_old <- extent(assembly_shp_old)
+
+nightlights <- assembly_shp %>%
+  dplyr::select(state, ac_no=ac, ac_name, -geometry)
+nightlights_old <- assembly_shp_old %>%
+  dplyr::select(state=State, ac_no=AC_NO, ac_name=AC_NAME, -geometry)
+```
+
+```{r upto2013}
+for (i in 1992:2013) {
+  rasterfile <- raster(paste0("../shrug/li/clipped_", as.character(i), "_calDMSP.tif"))
+  nightlights_old[paste0("ng_", as.character(i))] <- exact_extract(rasterfile, assembly_shp_old, 'mean', progress=FALSE)
+}
+
+for (i in 1993:2013) {
+  prev_year <- paste0("ng_", i - 1)
+  year <- paste0("ng_", i)
+  nightlights_old[paste0("ngdelta_", i)] <- (nightlights_old[[year]] - nightlights_old[[prev_year]]) / nightlights_old[[prev_year]] * 100
+}
+```
+
+``` {r upto2021}
+for (i in 2014:2021) {
+  rasterfile <- raster(paste0("../shrug/li/clipped_", as.character(i), "_simVIIRS.tif"))
+  nightlights[paste0("ng_", as.character(i))] <- exact_extract(rasterfile, assembly_shp, 'mean', progress=FALSE)
+}
+
+for (i in 2015:2021) {
+  prev_year <- paste0("ng_", i - 1)
+  year <- paste0("ng_", i)
+  nightlights[paste0("ngdelta_", i)] <- ((nightlights[[year]] - nightlights[[prev_year]]) / nightlights[[prev_year]]) * 100
+}
+```
+
+``` {r shapefile_table, echo=FALSE}
+kable(head(nightlights_old, 10))%>%
+  kable_styling(font_size=12)
+kable(nrow(nightlights_old))%>%
+  kable_styling(font_size=12)
+kable(head(nightlights, 10))%>%
+  kable_styling(font_size=12)
+kable(nrow(nightlights))%>%
+  kable_styling(font_size=12)
+
+# st_write(nightlights, "./data/nightlights_constituency.shp", delete_dsn = T)
+# st_write(nightlights_old, "./data/nightlights_constituency_old.shp", delete_dsn = T)
+```
+
+
+``` {r clean_datasets}
+volatility <- volatility%>%
+  mutate(Year = as.numeric(Year))%>%
+  mutate(Constituency_No = as.numeric(Constituency_No))%>%
+  mutate(Assembly_No = as.numeric(Assembly_No))%>%
+  mutate(State_Name = gsub(" ", "_", State_Name))%>%
+  mutate(Constituency_Name = gsub(" ", "_", Constituency_Name))%>%
+  mutate(State_Name = str_to_upper(State_Name))%>%
+  mutate(Constituency_Name = str_to_upper(Constituency_Name))%>%
+  mutate(State_Name = gsub("ORISSA", "ODISHA", State_Name))%>%
+  arrange(State_Name, Constituency_Name)
+
+nightlights_old <- nightlights_old%>%
+  mutate(state = gsub(" ", "_", state))%>%
+  mutate(ac_name = gsub(" ", "_", ac_name))%>%
+  mutate(state = str_to_upper(state))%>%
+  mutate(ac_name = str_to_upper(ac_name))%>%
+  mutate(state = gsub("TAMILNADU", "TAMIL_NADU", state))%>%
+  mutate(state = gsub("UTTARANCHAL", "UTTARAKHAND", state))%>%
+  mutate(state = gsub("ORISSA", "ODISHA", state))%>%
+  arrange(ac_name)
+
+nightlights <- nightlights%>%
+  mutate(ac_no = as.numeric(ac_no))%>%
+  mutate(state = gsub(" ", "_", state))%>%
+  mutate(ac_name = gsub(" ", "_", ac_name))%>%
+  mutate(state = str_to_upper(state))%>%
+  mutate(ac_name = str_to_upper(ac_name))%>%
+  mutate(state = gsub("ORISSA", "ODISHA", state))%>%
+  arrange(ac_name)
+```
+
+``` {r merge_old_data}
+volatility_year <- volatility%>%
+  filter(Year == 1990)
+
+old_data <- stringdist_join(nightlights_old, volatility_year, method="lcs", mode="inner", distance_col = "distance", by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))%>%
+  group_by("state", "ac_name", "Constituency_No")%>%
+  slice_min(order_by=distance, n=1)
+
+for (i in 1991:2013) {
+  volatility_year <- volatility%>%
+    filter(Year == i)
+  
+  data <- stringdist_join(nightlights_old, volatility_year, method="lcs", mode="inner", distance_col = "distance", by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))%>%
+  group_by("state", "ac_name", "Constituency_No")%>%
+  slice_min(order_by=distance, n=1)
+  
+  old_data <- rbind(old_data, data)
+}
+
+# temp <- inner_join(nightlights, fuzzy_2013, by = c("state" = "state", "ac_name" = "ac_name"))
+# temp <- inner_join(temp, volatility, by = c("state" = "State_Name", "matched_name" = "Constituency_Name"))
+```
+
+``` {r write_old_data}
+old_data <- old_data%>%
+  arrange(state, ac_name, Year)
+
+kable(head(old_data, 10))%>%
+  kable_styling(font_size=12)
+kable(nrow(old_data))%>%
+  kable_styling(font_size=12)
+
+# st_write(old_data, "./data/matched_dataset_old.shp", delete_dsn = T)
+```
+
+``` {r merge_new_data}
+volatility_year <- volatility%>%
+  filter(Year == 2010)
+
+new_data <- stringdist_join(nightlights, volatility_year, method="lcs", mode="inner", distance_col = "distance", by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))%>%
+  group_by("state", "ac_name", "Constituency_No")%>%
+  slice_min(order_by=distance, n=1)
+
+for (i in 2011:2021) {
+  volatility_year <- volatility%>%
+    filter(Year == i)
+  
+  data <- stringdist_join(nightlights, volatility_year, method="lcs", mode="inner", distance_col = "distance", by = c("state" = "State_Name", "ac_name" = "Constituency_Name"))%>%
+  group_by("state", "ac_name", "Constituency_No")%>%
+  slice_min(order_by=distance, n=1)
+  
+  new_data <- rbind(new_data, data)
+}
+
+# temp <- inner_join(nightlights, fuzzy_2013, by = c("state" = "state", "ac_name" = "ac_name"))
+# temp <- inner_join(temp, volatility, by = c("state" = "State_Name", "matched_name" = "Constituency_Name"))
+```
+
+``` {r write_new_data}
+new_data <- new_data%>%
+  arrange(state, ac_name, Year)
+
+kable(head(new_data, 10))%>%
+  kable_styling(font_size=12)
+kable(nrow(new_data))%>%
+  kable_styling(font_size=12)
+
+# st_write(new_data, "./data/matched_dataset_new.shp", delete_dsn = T)
+```
+
+``` {r pivot_old}
+old_panel <- old_data%>%
+  pivot_longer(cols = starts_with("ng_"),
+                          names_to = "nightlight_year",
+                          values_to = "nightlights")%>%
+  mutate(election_year = Year)%>%
+  mutate(delta_year = gsub("ng_", "", nightlight_year))
+
+old_panel <- old_panel[, c("state", "ac_no", "ac_name", "Constituency_No", "Assembly_No", "Electors", "Turnout", "ENOP", "election_year", "volatility", "incumb_change", "state_incumb_change", "delta_year", "nightlights", "geometry")]
+```
+
+``` {r pivot_new}
+new_panel <- new_data%>%
+  pivot_longer(cols = starts_with("ng_"),
+                          names_to = "nightlight_year",
+                          values_to = "nightlights")%>%
+  mutate(election_year = Year)%>%
+  mutate(delta_year = gsub("ng_", "", nightlight_year))
+
+new_panel <- new_panel[, c("state", "ac_no", "ac_name", "Constituency_No", "Assembly_No", "Electors", "Turnout", "ENOP", "election_year", "volatility", "incumb_change", "state_incumb_change", "delta_year", "nightlights", "geometry")]
+```
+
+``` {r append_total}
+panel <- rbind(old_panel, new_panel)
+panel <- panel%>%
+  distinct(state, ac_no, ac_name, election_year, delta_year, Assembly_No, .keep_all = TRUE)
+```
+
+``` {r panel_write}
+kable(head(panel, 10))%>%
+  kable_styling(font_size=12)
+kable(nrow(panel))%>%
+  kable_styling(font_size=12)
+
+# st_write(panel, "./data/matched_dataset.shp", delete_dsn = T)
+```
+
+``` {r panel}
+panel <- panel%>%
+  filter(election_year >= delta_year)%>%
+  mutate_all(~replace(., is.na(.), 0))%>%
+  
+  group_by(delta_year)%>%
+  mutate(mean_nightlights = mean(nightlights))%>%
+  ungroup()%>%
+  
+  mutate(adjusted_nightlights = ((nightlights - mean_nightlights)/mean_nightlights) * 100)%>%
+  
+  group_by(state, ac_name)%>%
+  mutate(absolute_change = nightlights - lag(nightlights, n=1))%>%
+  mutate(relative_change = ((nightlights - lag(nightlights, n=1))/lag(nightlights, n=1)) * 100)%>%
+  mutate(absolute_change_3 = nightlights - lag(nightlights, n=3))%>%
+  mutate(relative_change_3 = ((nightlights - lag(nightlights, n=3))/lag(nightlights, n=3)) * 100)%>%
+  mutate(absolute_adj_change = adjusted_nightlights - lag(adjusted_nightlights, n=1))%>%
+  mutate(relative_adj_change = ((adjusted_nightlights - lag(adjusted_nightlights, n=1))/lag(adjusted_nightlights, n=1)) * 100)%>%
+  ungroup()%>%
+  
+  group_by(state, ac_name, election_year)%>%
+  mutate(past_three = rollmean(nightlights, k = 3, fill = NA, align = "right"))%>%
+  mutate(absolute_change_p3 = past_three - lag(past_three))%>%
+  mutate(relative_change_p3 = ((past_three - lag(past_three))/lag(past_three)) * 100)%>%
+  ungroup()
+
+panel <- panel%>%
+  filter((delta_year == (election_year-1)) & (delta_year <= election_year))
+  
+panel <- panel%>%
+  filter(!is.na(relative_change))%>%
+  filter(is.finite(relative_change))%>%
+  filter(!is.na(volatility))%>%
+  filter(is.finite(volatility))
+```
+
+``` {r panel_write_2}
+kable(head(panel, 10))%>%
+  kable_styling(font_size=12)
+kable(nrow(panel))%>%
+  kable_styling(font_size=12)
+
+# st_write(panel, "./data/panel_dataset.shp", delete_dsn = T)
+```
+
+``` {r outliers}
+Q1 <- quantile(panel$relative_change, .25)
+Q3 <- quantile(panel$relative_change, .75)
+IQR <- IQR(panel$relative_change)
+
+panel <- panel%>%
+  filter((relative_change > (Q1 - 1.25*IQR)) & (relative_change < (Q3 + 1.25*IQR)))
+```
+
+``` {r model_relative_change}
+model_rc <- plm(volatility ~ relative_change + election_year, data = panel, model="within")
+stargazer(model_rc, type = "text", report=("vcsp*"))
+
+model_rc2 <- plm(incumb_change ~ relative_change + election_year, data = panel, model="within")
+stargazer(model_rc2, type = "text", report=("vcsp*"))
+
+model_rc3 <- plm(state_incumb_change ~ relative_change + election_year, data = panel, model="within")
+stargazer(model_rc3, type = "text", report=("vcsp*"))
+```
+
+``` {r model_relative_change_graph, echo=FALSE}
+ggplot(panel, aes(x = relative_change, y = volatility)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") + 
+  labs(title = "Our bivariate regression")
+
+ggplot(panel, aes(x = relative_change, y = volatility)) +
+  geom_point() +
+  facet_wrap(~election_year) +
+  geom_smooth(method = "lm", color = "blue") + 
+  labs(title = "Our bivariate regression")
+```

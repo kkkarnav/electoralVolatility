@@ -25,12 +25,11 @@ assembly <- read.csv("../TCPD/All_States_AE.csv")
 
 assembly_shp <- st_read("../shp/India_2014.geojson")
 assembly_shp_old <- st_read("../shp/India_2013.geojson")
-subdistricts_shp <- st_read("../shp/subdistrict.shp")
 ```
 
 ## Research Question
 
-We know that voters punish incumbents when the economy goes sour. At what level of governance do voters allocate responsibility for economic underperformance? Any voter in India is under atleast three levels of governance: local represenntation, state government, and central government. In the United States, where popular perception of control is focused on the President, voters tend to punish the President's party. Does this hold true for India, where economic initiative is (or was) significantly more decentralized?
+We know that voters punish incumbents when the economy goes sour. At what level of governance do voters allocate responsibility for economic underperformance? Any voter in India is under atleast three levels of governance: local representation, state government, and central government. In the United States, where popular perception of control is focused on the President, voters tend to punish the President's party. Does this hold true for India, where economic initiative is (or was) significantly more decentralized?
 
 ## Dependent Variable
 
@@ -64,12 +63,29 @@ for each party _p_ between election _t_ and _t-1_. To calculate this, we first w
 # Aggregate the dataframe by party instead of by candidate
 partywise_votes <- assembly %>%
   filter(last_poll == TRUE)%>%
+  mutate(is_winner = ifelse(Position == 1, 1, 0))%>%
   group_by(State_Name, Constituency_No, Constituency_Name, Year, Assembly_No, Party)%>%
-  summarize(Votes=sum(Votes), Valid_Votes=sum(Valid_Votes), Electors=first(Electors), Constituency_Type=first(Constituency_Type), Vote_Share_Percentage=sum(Vote_Share_Percentage))%>%
+  summarize(Votes=sum(Votes), Valid_Votes=sum(Valid_Votes), Electors=first(Electors), Constituency_Type=first(Constituency_Type), Vote_Share_Percentage=sum(Vote_Share_Percentage), ENOP=first(ENOP), is_winner=first(is_winner))%>%
+  ungroup()%>%
+  group_by(State_Name, Constituency_No, Constituency_Name, Party)%>%
+  mutate(is_incumbent = lag(is_winner, n=1))%>%
+  mutate(is_incumbent = replace_na(is_incumbent, 0))%>%
+  ungroup()%>%
+  group_by(State_Name, Assembly_No, Party)%>%
+  mutate(seats=sum(is_winner))%>%
+  ungroup()%>%
+  group_by(State_Name, Assembly_No)%>%
+  mutate(state_incumbent = ifelse(seats == max(seats), 1, 0))%>%
   ungroup()
 ```
 
-``` {r pivot}
+``` {r separate_vol}
+incumbent_votes <- partywise_votes%>%
+  filter(is_incumbent == 1)
+kable(incumbent_votes)
+```
+
+``` {pivot}
 # Extract the list of parties
 party_list <- as.list(unique(partywise_votes$Party))
 
@@ -87,5 +103,5 @@ partywise_votes <- partywise_votes%>%
 ```{r partywise_votes_table, echo=FALSE}
 kable(head(partywise_votes, 10), caption="Party-wise Vote Shares in Assembly Elections")%>%
   kable_styling(font_size=12)
-write.csv(partywise_votes, "./data/partywise_voteshare_constituency.csv", row.names=FALSE)
+# write.csv(partywise_votes, "./data/partywise_voteshare_constituency.csv", row.names=FALSE)
 ```

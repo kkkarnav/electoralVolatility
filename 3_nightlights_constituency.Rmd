@@ -25,7 +25,6 @@ library(exactextractr)
 
 assembly_shp <- st_read("../shp/india_assemblies.shp")
 assembly_shp_old <- st_read("../shp/AC_All_Final.shp")
-subdistricts_shp <- st_read("../shp/subdistrict.shp")
 ```
 
 To test our hypothesis, we'd want to narrow this down by calculating electoral volatility separately for the local incumbent party, the ruling state party, and the ruling central party.
