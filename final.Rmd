@@ -27,6 +27,7 @@ sf_use_s2(FALSE)
 
 ```{r data, include=FALSE, eval=FALSE}
 assembly <- read.csv("../TCPD/All_States_AE.csv")
+sgdp <- read.csv("./data/cso_sgdp.csv")
 
 assembly_shp <- st_read("../shp/india_assemblies.shp")
 assembly_shp_old <- st_read("../shp/AC_All_Final.shp")
@@ -460,7 +461,7 @@ volatility <- volatility%>%
   arrange(State_Name, Constituency_Name)
 ```
 
-``` {r merge_panel, eval=TRUE}
+``` {r merge_panel, eval=FALSE}
 volatility_year <- volatility%>%
   filter(election_year == 1990)
 
@@ -484,7 +485,7 @@ for (i in 1991:2021) {
 }
 ```
 
-``` {r filter_panel_data, eval=TRUE}
+``` {r filter_panel_data, eval=FALSE}
 panel_data <- st_drop_geometry(panel_data)
 
 panel <- panel_data%>%
@@ -496,7 +497,7 @@ panel <- panel_data%>%
 
 We then calculate our final independent variable metrics (relative and absolute changes in nightlights over differing time periods).
 
-``` {r panel_iv, eval=TRUE}
+``` {r panel_iv, eval=FALSE}
 panel <- panel%>%
   group_by(delta_year)%>%
   mutate(mean_nightlights = mean(nightlights))%>%
@@ -528,7 +529,7 @@ panel <- panel%>%
 
 We can also calculate the other variables which could impact electoral volatility (changes in ENOP, Turnout, etc), which we'll use as controls.
 
-``` {r panel_confounders, eval=TRUE}
+``` {r panel_confounders, eval=FALSE}
 panel <- panel%>%
   filter(delta_year == (election_year-1))%>%
   
@@ -552,7 +553,7 @@ panel <- panel%>%
 
 We eliminate outliers caused by low-value nightlights data and data errors, which gives us our final panel dataset.
 
-``` {r outliers, eval=TRUE}
+``` {r outliers, eval=FALSE}
 write.csv(panel, "./data/panel_dataset_with_outliers.csv", row.names=FALSE)
 panel_with_outliers <- panel
 
@@ -580,13 +581,13 @@ panel <- panel%>%
   mutate(state = gsub("&", " ", state))%>%
   mutate(
     cycle = case_when(
-      delta_year >= 2021 & delta_year <= 2025 ~ 2021,
-      delta_year >= 2016 & delta_year <= 2020 ~ 2016,
-      delta_year >= 2011 & delta_year <= 2015 ~ 2011,
-      delta_year >= 2006 & delta_year <= 2010 ~ 2006,
-      delta_year >= 2001 & delta_year <= 2005 ~ 2001,
-      delta_year >= 1996 & delta_year <= 2000 ~ 1996,
-      delta_year >= 1991 & delta_year <= 1995 ~ 1991,
+      election_year >= 2021 & election_year <= 2025 ~ 2021,
+      election_year >= 2016 & election_year <= 2020 ~ 2016,
+      election_year >= 2011 & election_year <= 2015 ~ 2011,
+      election_year >= 2006 & election_year <= 2010 ~ 2006,
+      election_year >= 2001 & election_year <= 2005 ~ 2001,
+      election_year >= 1996 & election_year <= 2000 ~ 1996,
+      election_year >= 1991 & election_year <= 1995 ~ 1991,
     ))
 ```
 
@@ -604,6 +605,7 @@ kable(nrow(panel_table))%>%
 
 ``` {r panel_summary, echo=FALSE, eval=TRUE}
 sumtable(panel)%>%
+  kable_styling(font_size=10)
 ```
 
 ``` {r panel_volatility_dist, echo=FALSE, eval=TRUE}
