@@ -612,10 +612,10 @@ kable(nrow(panel_table))%>%
 sumtable(panel)%>%
   kable_styling(font_size=10)
 
-sumtable(panel, group="state")%>%
+sumtable(panel, group='state')%>%
   kable_styling(font_size=10)
 
-sumtable(panel, group="election_year")%>%
+sumtable(panel, group='election_year')%>%
   kable_styling(font_size=10)
 ```
 
@@ -956,27 +956,27 @@ ggplot(means) +
 ```
 
 ``` {r filter_model_relative_change, eval=TRUE}
-model_rc <- plm(volatility ~ relative_change + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ relative_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_change ~ relative_change + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_change ~ relative_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_change ~ relative_change + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_change ~ relative_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_change ~ relative_change + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_change ~ relative_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("ac_name", "election_year"))
+stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r filter_model_relative_change_t, eval=TRUE}
-model_rc <- plm(volatility ~ relative_change_t + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ relative_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_change ~ relative_change_t + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_change ~ relative_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_change ~ relative_change_t + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_change ~ relative_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_change ~ relative_change_t + election_year + factor(ac_name), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_change ~ relative_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("ac_name", "election_year"))
+stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 Even this fails! Let's look at only one electoral cycle. The 2004 general election spotlighted the economy as a key electoral issue. That electoral cycle should indicate a strong correlation.
@@ -997,25 +997,25 @@ kable(nrow(panel_table))%>%
 ```
 
 ``` {r filter2_model_relative_change, eval=TRUE}
-model_rc <- plm(volatility ~ relative_change + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ relative_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_change ~ relative_change + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_change ~ relative_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_change ~ relative_change + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_change ~ relative_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_change ~ relative_change + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_change ~ relative_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("ac_name", "election_year"))
+stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r filter2_model_relative_change_t, eval=TRUE}
-model_rc <- plm(volatility ~ relative_change_t + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ relative_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_change ~ relative_change_t + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_change ~ relative_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_change ~ relative_change_t + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_change ~ relative_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_change ~ relative_change_t + election_year + factor(ac_name), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_change ~ relative_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("ac_name", "election_year"))
+stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
