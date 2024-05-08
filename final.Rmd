@@ -22,10 +22,11 @@ library(vtable)
 library(zoo)
 library(plm)
 library(stargazer)
+library(ggthemes)
 sf_use_s2(FALSE)
 ```
 
-```{r data, include=FALSE, eval=FALSE}
+```{r data, include=FALSE, eval=TRUE}
 # The TCPD dataset
 assembly <- read.csv("../TCPD/All_States_AE.csv")
 
@@ -42,7 +43,7 @@ We know that voters punish incumbents when the economy goes sour. At what level 
 
 To measure how voters reward and punish retrospective economic conditions, we use electoral volatility. We can calculate this for each constituency and each election using TCPD's assembly election dataset.
 
-```{r tcpd, include=FALSE, eval=FALSE}
+```{r tcpd, include=FALSE, eval=TRUE}
 kable(head(assembly), caption="Assembly Elections Dataset")
 assembly <- assembly%>%
   filter(last_poll == TRUE)
@@ -50,7 +51,8 @@ assembly <- assembly%>%
 
 The dataset contains a number of electoral indicators which are calculated at the constituency level, rather than being specific to candidate or party. These are the voter turnout (which indicates the level of democratic participation) and Effective Number of Parties (ENOP, which indicates the effective degree of choice that the voter has). They are simple measures of voting behaviour which we will use these as controls while studying the impact of the economy on electoral volatility.
 
-```{r vote_stats_table, echo=FALSE, eval=FALSE}
+```{r vote_stats_table, echo=FALSE, eval=TRUE}
+# Aggregate electoral indicators from the TCPD dataset that we'll later use as controls
 aggregate_electoral_indicators <- assembly %>%
   group_by(State_Name, Year, Constituency_No, Constituency_Name)%>%
   summarize(total_votes=sum(Votes), Electors=first(Electors), Turnout_Percentage=first(Turnout_Percentage), ENOP=first(ENOP))
@@ -71,8 +73,8 @@ More comprehensive measures of voting behaviour are calculated from one election
 The first three are simple to calculate: they are simply the change in the percentage voteshare received by each type of party between one election and the next.  
 To accomplish this, we first create binary variables holding the status of each party (whether it won, or was incumbent in, that constituency or state election).
 
-``` {r clean_tcpd, eval=FALSE}
-# Aggregate the data by party instead of by candidate
+``` {r clean_tcpd, eval=TRUE}
+# Aggregate the data by party instead of by candidate, filter elections before 1980
 partywise_votes <- assembly %>%
   filter(Year >= 1980)%>%
   mutate(is_winner = ifelse(Position == 1, 1, 0))%>%
@@ -82,8 +84,13 @@ partywise_votes <- assembly %>%
   ungroup()
 ```
 
+``` {r tcpd_summary, echo=FALSE, eval=TRUE}
+sumtable(partywise_votes)%>%
+  kable_styling(font_size=10)
+```
+
 ``` {r binaries, eval=FALSE}  
-# Calculate incumbent measures
+# Flag winners and incumbents at all three levels
 partywise_votes <- partywise_votes%>%
   group_by(State_Name, Assembly_No, Party)%>%
   mutate(seats=sum(is_winner))%>%
@@ -118,7 +125,7 @@ partywise_votes <- partywise_votes%>%
 We can then create columns to store the voteshare of the winning and incumbent party at both levels for each election. 
 
 ``` {r incumbents, eval=FALSE}
-# Create columns for the respective incumbent parties
+# Create columns for the voteshares of the respective incumbent parties
 partywise_votes <- partywise_votes%>%
   mutate(Winning_Party = ifelse(is_winner == 1, Vote_Share_Percentage, 0))%>%
   mutate(State_Win_Party = ifelse(state_winner == 1, Vote_Share_Percentage, 0))%>%
@@ -148,7 +155,7 @@ partywise_votes <- partywise_votes%>%
 
 ```{r partywise_votes_table, echo=FALSE, eval=FALSE}
 pv_table <- partywise_votes%>%
-  dplyr::select(State_Name, Constituency_Name, Year, Winning_Party, State_Win_Party, Incumbent_Party, State_Incumb_Party, Nat_Incumb_Party)
+  dplyr::select(State_Name, Constituency_Name, Year, Winning_Party, State_Win_Party, Incumbent_Party, State_Incumb_Party, Nat_Win_Party, Nat_Incumb_Party)
 
 kable(head(pv_table, 10), caption="Party-wise Vote Shares in Assembly Elections")%>%
   kable_styling(font_size=12)
@@ -177,9 +184,8 @@ write.csv(partywise_deltas, "./data/partywise_deltas.csv", row.names=FALSE)
 ```
 
 ``` {r volatility, eval=FALSE}
-partywise_deltas <- read.csv("./data/partywise_deltas.csv")
-
 # Calculate the volatility by summing the deltas for each party
+# Also rename the incumbent voteshare columns
 partywise_deltas <- partywise_deltas%>%
   group_by(State_Name, Constituency_No, Constituency_Name)%>%
   
@@ -210,6 +216,11 @@ kable(nrow(v_table))%>%
 write.csv(volatility, "./data/volatility.csv", row.names=FALSE)
 ```
 
+``` {r vol_summary, echo=FALSE, eval=TRUE}
+sumtable(volatility)%>%
+  kable_styling(font_size=10)
+```
+
 This gives us our dependent variable, electoral volatility, at the constituency level.  
 
 Taking a look at the data, there doesn't seem to be a clear regional trend in volatility. The lowest mean volatility naturally arises from states which only existed for short periods of time: Madras, Mysore, Telangana. The most volatile states seem to be Manipur and Tamil Nadu, which is consistent with their electoral reputation.
@@ -218,16 +229,61 @@ Taking a look at the data, there doesn't seem to be a clear regional trend in vo
 # calculates the median value for each state
 state_table <- volatility %>%
   group_by(State_Name)%>%
-  summarise(median_vol=median(volatility), na.rm=TRUE)%>%
+  summarise(median_vol=median(volatility), median_incumb_share=median(incumb_share), median_state_incumb_share=median(state_incumb_share), median_nat_incumb_share=median(nat_incumb_share), na.rm=TRUE)%>%
   arrange(median_vol)
 
 volatility["State_Name"] <- factor(volatility$State_Name, levels = state_table$State_Name)
 
 ggplot(volatility, aes(x = factor(State_Name), y = volatility)) +
   geom_boxplot() +
-  labs(title = "Volatility by State") +
+  labs(title = "Mean Electoral Volatility by State") +
   xlab("State/UT") +
-  ylab("% Volatiliy") +
+  ylab("% Volatility") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+``` {r boxplot_state2, echo=FALSE, eval=TRUE}
+# calculates the median value for each state
+state_table <- state_table%>%
+  arrange(median_incumb_share)
+
+volatility["State_Name"] <- factor(volatility$State_Name, levels = state_table$State_Name)
+
+ggplot(volatility, aes(x = factor(State_Name), y = incumb_share)) +
+  geom_boxplot() +
+  labs(title = "Mean Incumbent Voteshare by State") +
+  xlab("State/UT") +
+  ylab("Incumbent Voteshare (%)") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+``` {r boxplot_state3, echo=FALSE, eval=TRUE}
+# calculates the median value for each state
+state_table <- state_table%>%
+  arrange(median_state_incumb_share)
+
+volatility["State_Name"] <- factor(volatility$State_Name, levels = state_table$State_Name)
+
+ggplot(volatility, aes(x = factor(State_Name), y = state_incumb_share)) +
+  geom_boxplot() +
+  labs(title = "Mean State Incumbent Voteshare by State") +
+  xlab("State/UT") +
+  ylab("State Incumbent Voteshare (%)") +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+``` {r boxplot_state4, echo=FALSE, eval=TRUE}
+# calculates the median value for each state
+state_table <- state_table%>%
+  arrange(median_nat_incumb_share)
+
+volatility["State_Name"] <- factor(volatility$State_Name, levels = state_table$State_Name)
+
+ggplot(volatility, aes(x = factor(State_Name), y = nat_incumb_share)) +
+  geom_boxplot() +
+  labs(title = "Mean National Incumbent Voteshare by State") +
+  xlab("State/UT") +
+  ylab("National Incumbent Voteshare (%)") +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
@@ -252,9 +308,10 @@ volatility <- volatility%>%
 
 ggplot(volatility, aes(x = factor(cycle), y = volatility)) +
   geom_boxplot() +
-  labs(title = "Volatility by Election") +
-  xlab("Assembly") +
-  ylab("% Volatiliy")
+  labs(title = "Mean Electoral Volatility by Election Cycle") +
+  xlab("Election Cycle") +
+  ylab("% Volatility") + 
+  theme_economist() + scale_fill_economist()
 ```
 
 Looking at electoral volatility over time, it clearly rises over the early Congress era until it peaks after the end of Emergency. There is a pronounced downward trend from then to today, displaying lower highs and lower lows, which is consistent with literature.
@@ -267,9 +324,10 @@ means <- volatility %>%
 ggplot(means, aes(x = cycle, y = mean_volatility)) +
   geom_line() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") + 
-  labs(title = "Volatility by Election") +
-  xlab("Year") +
+  labs(title = "Mean Electoral Volatility by Election Cycle") +
+  xlab("Election Cycle") +
   ylab("% Volatiliy") +
+  theme_economist() + scale_fill_economist() +
   theme(axis.text.x = element_text(angle = 45)) +
   ylim(0, 100)
 ```
@@ -278,12 +336,13 @@ Similarly, looking at anti-incumbency by year, there seems to be a pronounced de
 
 ``` {r change_line_year, echo=FALSE, eval=TRUE}
 ggplot(means, aes(x = cycle)) +
-  geom_line(aes(y = incumb_share, colour = "incumb_share")) + 
-  geom_line(aes(y = state_incumb_share, colour = "state_incumb_share")) +
-  geom_line(aes(y = nat_incumb_share, colour = "nat_incumb_share")) +
-  labs(title = "Incumbents by Election") +
-  xlab("Year") +
+  geom_line(aes(y = incumb_share, colour = "Incumbents")) + 
+  geom_line(aes(y = state_incumb_share, colour = "State Ruling Parties")) +
+  geom_line(aes(y = nat_incumb_share, colour = "National Ruling Parties")) +
+  labs(title = "Mean Incumbent Voteshare by Election Cycle") +
+  xlab("Election Cycle") +
   ylab("Incumbent Voteshare Change") +
+  theme_economist() + scale_fill_economist() +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
@@ -387,7 +446,7 @@ nightlights <- nightlights%>%
          nightlights = nghtlgh)
 ```
 
-``` {r nightlights_table, echo=FALSE, eval=FALSE}
+``` {r nightlights_table, echo=FALSE, eval=TRUE}
 ng_table <- nightlights_new%>%
   dplyr::select(state, ac_name, ng_2008, ng_2021)
 
@@ -397,7 +456,12 @@ kable(nrow(ng_table))%>%
   kable_styling(font_size=12)
 ```
 
-``` {r nightlights_graph, echo=FALSE, eval=FALSE}
+``` {r ntl_summary, echo=FALSE, eval=TRUE}
+sumtable(nightlights)%>%
+  kable_styling(font_size=10)
+```
+
+``` {r nightlights_graph, echo=FALSE, eval=TRUE}
 ggplot(nightlights_old) +
   geom_sf(aes(fill=ng_1992), linetype=0) +
   ggtitle(label = "Nightlights in 1992") +
@@ -488,25 +552,19 @@ panel <- panel%>%
   ungroup()%>%
 
   group_by(state, ac_name)%>%
-  mutate(absolute_change = nightlights - dplyr::lag(nightlights, n=1))%>%
   mutate(percent_change = ((nightlights - dplyr::lag(nightlights, n=1))/dplyr::lag(nightlights, n=1)) * 100)%>%
     
-  mutate(absolute_change_3 = nightlights - dplyr::lag(nightlights, n=3))%>%
   mutate(percent_change_3 = ((nightlights - dplyr::lag(nightlights, n=3))/dplyr::lag(nightlights, n=3)) * 100)%>%
   
   group_by(state, ac_name)%>%
-  mutate(absolute_change_t = nightlights - dplyr::lag(nightlights, n=5))%>%
   mutate(percent_change_t = ((nightlights - dplyr::lag(nightlights, n=5))/dplyr::lag(nightlights, n=5)) * 100)%>%
   ungroup()%>%
   
   mutate(past_three = rollmean(nightlights, k = 3, fill = NA, align = "right"))%>%
-  mutate(absolute_change_p3 = past_three - dplyr::lag(past_three))%>%
   mutate(percent_change_p3 = ((past_three - dplyr::lag(past_three))/dplyr::lag(past_three)) * 100)%>%
   
-  mutate(absolute_change_p3_3 = past_three - dplyr::lag(past_three, n=3))%>%
   mutate(percent_change_p3_3 = ((past_three - dplyr::lag(past_three, n=3))/dplyr::lag(past_three, n=3)) * 100)%>%
   
-  mutate(absolute_change_p3_t = past_three - dplyr::lag(past_three, n=5))%>%
   mutate(percent_change_p3_t = ((past_three - dplyr::lag(past_three, n=5))/dplyr::lag(past_three, n=5)) * 100)%>%
   ungroup()
 ```
@@ -540,17 +598,17 @@ We eliminate outliers caused by low-value nightlights data and data errors, whic
 write.csv(panel, "./data/panel_dataset_with_outliers.csv", row.names=FALSE)
 panel_with_outliers <- panel
 
-Q1_1 <- quantile(panel$percent_change, .25)
-Q3_1 <- quantile(panel$percent_change, .75)
-IQR_1 <- IQR(panel$percent_change)
+Q1_1 <- quantile(panel$percent_change_p3, .25)
+Q3_1 <- quantile(panel$percent_change_p3, .75)
+IQR_1 <- IQR(panel$percent_change_p3)
 
-Q1_2 <- quantile(panel$percent_change_t, .25)
-Q3_2 <- quantile(panel$percent_change_t, .75)
-IQR_2 <- IQR(panel$percent_change_t)
+Q1_2 <- quantile(panel$percent_change_p3_t, .25)
+Q3_2 <- quantile(panel$percent_change_p3_t, .75)
+IQR_2 <- IQR(panel$percent_change_p3_t)
 
 panel <- panel%>%
-  filter((percent_change > (Q1_1 - 1.25*IQR_1)) & (percent_change < (Q3_1 + 1.25*IQR_1)))%>%
-  filter((percent_change_t > (Q1_2 - 1.25*IQR_2)) & (percent_change_t < (Q3_2 + 1.25*IQR_2)))%>%
+  filter((percent_change_p3 > (Q1_1 - 1.25*IQR_1)) & (percent_change_p3 < (Q3_1 + 1.25*IQR_1)))%>%
+  filter((percent_change_p3_t > (Q1_2 - 1.25*IQR_2)) & (percent_change_p3_t < (Q3_2 + 1.25*IQR_2)))%>%
   mutate(state = gsub("_", " ", state))%>%
   mutate(state = gsub("&", " ", state))
 
@@ -595,90 +653,144 @@ sumtable(panel)%>%
 ggplot(panel, aes(x=volatility)) +
   geom_histogram(color="skyblue", fill="white") +
   labs(title = "Distribution of volatility values") +
+  xlab("Volatility (%)") +
+  ylab("Number of Observations") +
+  theme_economist() + scale_fill_economist() +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
 ``` {r panel_relativechange_dist, echo=FALSE, eval=TRUE}
-ggplot(panel, aes(x=percent_change)) +
+ggplot(panel, aes(x=percent_change_p3)) +
   geom_histogram(color="skyblue", fill="white") +
-  labs(title = "Distribution of relative change values") +
+  labs(title = "Distribution of nightlights change values") +
+  xlab("Nightlights Change (%)") +
+  ylab("Number of Observations") +
+  theme_economist() + scale_fill_economist() +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
 ``` {r panel_graph, echo=FALSE, eval=TRUE}
 means <- panel%>%
   group_by(delta_year)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), across())%>%
   ungroup()%>%
   group_by(cycle)%>%
   summarise(mean_volatility=mean(volatility), across())%>%
   ungroup()
 
 ggplot(means) +
-  geom_line(aes(x=delta_year, y=percent_change, colour = "percent_change")) +
-  geom_line(aes(x=delta_year, y=percent_change_t, colour = "percent_change_t")) +
-  geom_line(aes(x=cycle, y=mean_volatility, colour = "mean_volatility")) +
-  labs(title = "Nightlights and Volatility Over Years") +
+  geom_line(aes(x=delta_year, y=percent_change, colour = "Nightlights Change (%)")) +
+  geom_line(aes(x=delta_year, y=percent_change_t, colour = "Nightlights Change (%) Over Tenure")) +
+  geom_line(aes(x=cycle, y=mean_volatility, colour = "Mean Electoral Volatility")) +
+  labs(title = "Nightlights Change and Volatility Over Time") +
   xlab("Year") +
-  ylab("Nightlights and Volatility") +
-  theme(axis.text.x = element_text(angle = 45))
+  ylab("Nightlights Change and Volatility (%)") +
+  theme_economist() + scale_fill_economist() +
+  theme(axis.text.x = element_text(angle = 45), 
+    legend.text = element_text(size = 10))
 ```
 
 ``` {r panel_state_graph, echo=FALSE, eval=TRUE}
 means <- panel%>%
   group_by(delta_year, state)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), across())%>%
   ungroup()%>%
   group_by(cycle, state)%>%
   summarise(mean_volatility=mean(volatility), across())%>%
   ungroup()
 
 ggplot(means) +
-  geom_line(aes(x=delta_year, y=percent_change, colour = "percent_change")) +
-  geom_line(aes(x=delta_year, y=percent_change_t, colour = "percent_change_t")) +
-  geom_line(aes(x=cycle, y=mean_volatility, colour = "mean_volatility")) +
+  geom_line(aes(x=delta_year, y=percent_change, colour = "Nightlights Change (%)")) +
+  geom_line(aes(x=delta_year, y=percent_change_t, colour = "Nightlights Change (%) Over Tenure")) +
+  geom_line(aes(x=cycle, y=mean_volatility, colour = "Mean Electoral Volatility")) +
   facet_wrap(~state) +
-  labs(title = "Nightlights and Volatility Over Years") +
+  labs(title = "Nightlights Change and Volatility Over Time") +
   xlab("Year") +
-  ylab("Nightlights and Volatility") +
-  theme(axis.text.x = element_text(angle = 45))
+  ylab("Nightlights Change and Volatility (%)") +
+  theme_economist() + scale_fill_economist() +
+  theme(axis.text.x = element_text(angle = 45), 
+    legend.text = element_text(size = 8),
+    legend.spacing.x = unit(0.3, "cm"))
 ```
 
 ``` {r panel_correlation, echo=FALSE, eval=TRUE}
 means <- panel%>%
   group_by(state)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), mean_volatility=mean(volatility), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), mean_volatility=mean(volatility), across())%>%
   ungroup()
 
-ggplot(means, aes(x=percent_change, y=mean_volatility, colour=state)) +
+ggplot(means, aes(x=percent_change, y=mean_volatility)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") + 
-  labs(title = "Nightlights and Volatility by State") +
-  xlab("Mean % Change in Nightlights") +
-  ylab("Mean Volatility") +
-  theme(axis.text.x = element_text(angle = 45))
+  labs(title = "Mean Nightlights Change and Volatility by State") +
+  xlab("Nightlights Change (%)") +
+  ylab("Mean Volatility (%)") +
+  theme_economist() + scale_fill_economist() +
+  theme(axis.text.x = element_text(angle = 45), 
+    legend.text = element_text(size = 10),
+    legend.spacing.x = unit(0.3, "cm"))
 ```
 
 ``` {r panel_correlation_facet, echo=FALSE, eval=TRUE}
 means <- panel%>%
   group_by(state, cycle)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), mean_volatility=mean(volatility), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), mean_volatility=mean(volatility), across())%>%
   ungroup()
 
-ggplot(means, aes(x=percent_change, y=mean_volatility, colour=state)) +
+ggplot(means, aes(x=percent_change, y=mean_volatility)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") + 
-  labs(title = "Nightlights and Volatility Over Years") +
+  labs(title = "Mean Nightlights Change and Volatility over Election Cycles") +
   facet_wrap(~cycle) +
-  xlab("Mean % Change in Nightlights") +
-  ylab("Mean Volatility") +
-  theme(axis.text.x = element_text(angle = 45))
+  xlab("Nightlights Change (%)") +
+  ylab("Mean Volatility (%)") +
+  theme_economist() + scale_fill_economist() +
+  theme(axis.text.x = element_text(angle = 45), 
+    legend.text = element_text(size = 10),
+    legend.spacing.x = unit(0.3, "cm"))
+```
+
+``` {r panel_correlation2, echo=FALSE, eval=TRUE}
+means <- panel%>%
+  group_by(state)%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), mean_volatility=mean(volatility), mean_state=mean(state_incumb_share), across())%>%
+  ungroup()
+
+ggplot(means, aes(x=percent_change, y=mean_state)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") + 
+  labs(title = "Mean Nightlights Change and Volatility by State") +
+  xlab("Nightlights Change (%)") +
+  ylab("Mean Volatility (%)") +
+  theme_economist() + scale_fill_economist() +
+  theme(axis.text.x = element_text(angle = 45), 
+    legend.text = element_text(size = 10),
+    legend.spacing.x = unit(0.3, "cm"))
+```
+
+``` {r panel_correlation_facet2, echo=FALSE, eval=TRUE}
+means <- panel%>%
+  group_by(state, cycle)%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), mean_volatility=mean(volatility), mean_state=mean(state_incumb_share), across())%>%
+  ungroup()
+
+ggplot(means, aes(x=percent_change, y=mean_state)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") + 
+  labs(title = "Mean Nightlights Change and Volatility over Election Cycles") +
+  facet_wrap(~cycle) +
+  xlab("Nightlights Change (%)") +
+  ylab("Mean Volatility (%)") +
+  theme_economist() + scale_fill_economist() +
+  theme(axis.text.x = element_text(angle = 45), 
+    legend.text = element_text(size = 10),
+    legend.spacing.x = unit(0.3, "cm"))
 ```
 
 ``` {r panel_correlation_const, echo=FALSE, eval=TRUE}
 means <- panel%>%
   group_by(ac_name)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), mean_volatility=mean(volatility), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), mean_volatility=mean(volatility), across())%>%
   ungroup()
 
 ggplot(means, aes(x=percent_change, y=mean_volatility)) +
@@ -687,13 +799,14 @@ ggplot(means, aes(x=percent_change, y=mean_volatility)) +
   labs(title = "Nightlights and Volatility by Const") +
   xlab("Mean % Change in Nightlights") +
   ylab("Mean Volatility") +
+  theme_economist() + scale_fill_economist() +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
 ``` {r panel_correlation_facet_const, echo=FALSE, eval=TRUE}
 means <- panel%>%
   group_by(ac_name, cycle)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), mean_volatility=mean(volatility), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), mean_volatility=mean(volatility), across())%>%
   ungroup()
 
 ggplot(means, aes(x=percent_change, y=mean_volatility)) +
@@ -703,6 +816,7 @@ ggplot(means, aes(x=percent_change, y=mean_volatility)) +
   facet_wrap(~cycle) +
   xlab("Mean % Change in Nightlights") +
   ylab("Mean Volatility") +
+  theme_economist() + scale_fill_economist() +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
@@ -727,19 +841,20 @@ sndp_means <- sndp%>%
 
 means <- panel%>%
   group_by(delta_year)%>%
-  summarise(mean_nightlights=mean(nightlights)*500, percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), mean_volatility=mean(volatility), across())%>%
+  summarise(mean_nightlights=mean(nightlights)*500, percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), mean_volatility=mean(volatility), across())%>%
   ungroup()
 
 ggplot() +
-  geom_line(data=means, aes(x=delta_year, y=mean_nightlights, colour = "mean_nightlights")) +
-  geom_line(data=sndp_means, aes(x=delta_year, y=pc_sndp_mean, colour = "pc_sndp")) +
+  geom_line(data=means, aes(x=delta_year, y=mean_nightlights, colour = "Mean Nightlights")) +
+  geom_line(data=sndp_means, aes(x=delta_year, y=pc_sndp_mean, colour = "Per Capita State NDP")) +
   labs(title = "Nightlights and SGDP Over Years") +
   xlab("Year") +
-  ylab("Nightlights and SGDP") +
+  ylab("Per Capita State NDP") +
+  theme_economist() + scale_fill_economist() +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
-``` {r try, eval=TRUE}
+``` {r merge_sndp_panel, eval=TRUE}
 temp_vol <- volatility%>%
   group_by(State_Name, election_year)%>%
   summarise(volatility = mean(volatility))
@@ -748,20 +863,17 @@ temp_panel <- inner_join(sndp, temp_vol, by=c("state" = "State_Name", "delta_yea
 kable(head(temp_panel, 20))
 ```
 
-``` {r model_percent_change_temp, eval=TRUE}
+``` {r model_sndp, eval=TRUE}
 model_rc <- plm(volatility ~ pc_sndp + delta_year + factor(state), data = temp_panel, index=c("state", "delta_year"), model="within")
 
 stargazer(model_rc, type="text", report=("vcsp*"), omit=c("state", "delta_year"))
 ```
 
-We now implement our empirical strategy. Our independent variable is represented by five measures:  
+We now implement our empirical strategy. Our independent variable is represented by three measures:  
 
-* Absolute change in nightlights in the preceding year
 * Relative change in nightlights in the preceding year
 * Relative change in nightlights in the preceding 3 years
 * Relative change in nightlights since the last election
-* Relative change in the average nightlights of the last three years versus the previous three
-* Relative change in the average nightlights of the last three years versus the previous three
 
 Our dependent variable is represented by four measures: 
 
@@ -773,125 +885,113 @@ Our dependent variable is represented by four measures:
 We'll use a fixed-effects model controlling for state, year, and non-economic determinants to look at the effect.
 
 ``` {r model_percent_change_basic, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3 + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3 + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3 + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3 + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
-``` {r model_absolute_change, eval=TRUE}
-model_ac <- plm(volatility ~ absolute_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+``` {r model_percent_change_t_basic, eval=TRUE}
+model_rc <- plm(volatility ~ percent_change_p3_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_ac2 <- plm(incumb_share ~ absolute_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_ac3 <- plm(state_incumb_share ~ absolute_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_ac4 <- plm(nat_incumb_share ~ absolute_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-stargazer(model_ac, model_ac2, model_ac3, model_ac4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
+stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r model_percent_change, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("ac_name", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r model_percent_change_3, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3_3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3_3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3_3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3_3 + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r model_percent_change_t, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
-
-stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
-```
-
-``` {r model_percent_change_p3, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
-
-model_rc2 <- plm(incumb_share ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
-
-model_rc3 <- plm(state_incumb_share ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
-
-model_rc4 <- plm(nat_incumb_share ~ percent_change_p3 + election_year + delta_ENOP + delta_Turnout + years_since_election + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3_t + election_year + delta_ENOP + delta_Turnout + Electors + factor(state), data = panel, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r model_graph, echo=FALSE, eval=TRUE}
-ggplot(panel, aes(x = percent_change, y = volatility)) +
+ggplot(panel, aes(x = percent_change_p3, y = volatility)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change vs Volatility")
 
-ggplot(panel, aes(x = percent_change, y = incumb_share)) +
+ggplot(panel, aes(x = percent_change_p3, y = incumb_share)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change vs Incumbent Change")
 
-ggplot(panel, aes(x = percent_change, y = state_incumb_share)) +
+ggplot(panel, aes(x = percent_change_p3, y = state_incumb_share)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change vs State Incumbent Change")
 
-ggplot(panel, aes(x = percent_change, y = nat_incumb_share)) +
+ggplot(panel, aes(x = percent_change_p3, y = nat_incumb_share)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change vs National Incumbent Change")
 
-ggplot(panel, aes(x = percent_change_t, y = volatility)) +
+ggplot(panel, aes(x = percent_change_p3_t, y = volatility)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change over tenure vs Volatility")
 
-ggplot(panel, aes(x = percent_change_t, y = incumb_share)) +
+ggplot(panel, aes(x = percent_change_p3_t, y = incumb_share)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change over tenure vs Incumbent Change")
 
-ggplot(panel, aes(x = percent_change_t, y = state_incumb_share)) +
+ggplot(panel, aes(x = percent_change_p3_t, y = state_incumb_share)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change over tenure vs State Incumbent Change")
 
-ggplot(panel, aes(x = percent_change_t, y = state_incumb_share)) +
+ggplot(panel, aes(x = percent_change_p3_t, y = state_incumb_share)) +
   geom_point() +
   geom_smooth(method = "lm", color = "blue") + 
   labs(title = "Relative Change over tenure vs National Incumbent Change")
 ```
 
-Since we couldn't draw any comparisons from all of India, let's restrict our scope. Dash & Ferris uses the following 14 states from 1957 to 2011. Unfortunately, we'll have to restrict our analysis to the period after 1991 since there is no nightlights data before that. However, we can replicate the analysis for these states from 1991 to 2011.
+Since we couldn't draw any comparisons from all of India, let's restrict our scope. Dash & Ferris uses the following 14 states from 1957 to 2011. Unfortunately, we'll have to restrict our analysis to the period after 1991 since there is no nightlights data before that. However, we can replicate the analysis for these states from 1991 to 2011. We'll add Assam to the analysis since we have enough observations for it.
 
 ``` {r filter_panel, include=FALSE, eval=TRUE}
 filterpanel <- panel%>%
   filter(election_year <= 2011)%>%
-  filter((state == "ANDHRA PRADESH") | (state == "BIHAR") | (state == "GUJARAT") | (state == "HARYANA") | (state == "KARNATAKA") | (state == "KERALA") | (state == "MADHYA PRADESH") | (state == "MAHARASHTRA") | (state == "ODISHA") | (state == "PUNJAB") | (state == "RAJASTHAN") | (state == "TAMIL NADU") | (state == "UTTAR PRADESH") | (state == "WEST BENGAL"))
+  filter((state == "ANDHRA PRADESH") | (state == "ASSAM") | (state == "BIHAR") | (state == "GUJARAT") | (state == "HARYANA") | (state == "KARNATAKA") | (state == "KERALA") | (state == "MADHYA PRADESH") | (state == "MAHARASHTRA") | (state == "ODISHA") | (state == "PUNJAB") | (state == "RAJASTHAN") | (state == "TAMIL NADU") | (state == "UTTAR PRADESH") | (state == "WEST BENGAL"))
 ```
 
 ``` {r filter_panel_table, echo=FALSE, eval=TRUE}
@@ -912,7 +1012,7 @@ ggplot(filterpanel, aes(x=volatility)) +
 ```
 
 ``` {r filter_panel_relativechange_dist, echo=FALSE, eval=TRUE}
-ggplot(filterpanel, aes(x=percent_change)) +
+ggplot(filterpanel, aes(x=percent_change_p3)) +
   geom_histogram(color="skyblue", fill="white") +
   labs(title = "Distribution of relative change values") +
   theme(axis.text.x = element_text(angle = 45))
@@ -921,7 +1021,7 @@ ggplot(filterpanel, aes(x=percent_change)) +
 ``` {r filter_panel_graph, echo=FALSE, eval=TRUE}
 means <- filterpanel%>%
   group_by(delta_year)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), across())%>%
   ungroup()%>%
   group_by(cycle)%>%
   summarise(mean_volatility=mean(volatility), across())%>%
@@ -940,7 +1040,7 @@ ggplot(means) +
 ``` {r filter_panel_state_graph, echo=FALSE, eval=TRUE}
 means <- filterpanel%>%
   group_by(delta_year, state)%>%
-  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change), percent_change_t=mean(percent_change_t), across())%>%
+  summarise(mean_nightlights=mean(nightlights), percent_change=mean(percent_change_p3), percent_change_t=mean(percent_change_p3_t), across())%>%
   ungroup()%>%
   group_by(cycle, state)%>%
   summarise(mean_volatility=mean(volatility), across())%>%
@@ -970,21 +1070,21 @@ stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*
 ```
 
 ``` {r filter_model_percent_change_t, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 Even this fails! Let's look at only one electoral cycle. The 2009 general election spotlighted the economy as a key electoral issue. That electoral cycle should indicate a strong correlation.
 
-``` {r filter2_panel, include=FALSE, eval=TRUE}
-filterpanel2 <- filterpanel%>%
+``` {r filter2_panel, include=TRUE, eval=TRUE}
+filterpanel2 <- panel%>%
   filter((cycle == 2011) | (cycle == 2006))
 ```
 
@@ -999,25 +1099,25 @@ kable(nrow(panel_table))%>%
 ```
 
 ``` {r filter2_model_percent_change, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3 + election_year*factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3 + election_year*factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3 + election_year*factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3 + election_year*factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r filter2_model_percent_change_t, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
@@ -1025,28 +1125,28 @@ stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*
 Only negative growth constituencies
 
 ``` {r filter_model_percent_change2, eval=TRUE}
-filterpanel2 <- filterpanel2%>%
+filterpanel <- filterpanel%>%
   filter(percent_change_p3 < 0)
 
-model_rc <- plm(volatility ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3 + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
 
 ``` {r filter_model_percent_change_t2, eval=TRUE}
-model_rc <- plm(volatility ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc <- plm(volatility ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc2 <- plm(incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc2 <- plm(incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc3 <- plm(state_incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc3 <- plm(state_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
-model_rc4 <- plm(nat_incumb_share ~ percent_change_t + election_year + factor(state), data = filterpanel2, index=c("state", "ac_name", "election_year"), model="within")
+model_rc4 <- plm(nat_incumb_share ~ percent_change_p3_t + election_year + factor(state), data = filterpanel, index=c("state", "ac_name", "election_year"), model="within")
 
 stargazer(model_rc, model_rc2, model_rc3, model_rc4, type="text", report=("vcsp*"), omit=c("state", "election_year"))
 ```
